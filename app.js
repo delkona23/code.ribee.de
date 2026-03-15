@@ -519,9 +519,10 @@ async function handleKnxFile(file) {
     }
 }
 
-// Namespace-agnostischer Selektor: nutzt localName statt tagName
+// Namespace-agnostischer Selektor: nutzt localName (case-insensitive)
 function qAll(doc, localName) {
-    return Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === localName);
+    const lc = localName.toLowerCase();
+    return Array.from(doc.getElementsByTagName('*')).filter(el => el.localName.toLowerCase() === lc);
 }
 
 async function parseKnxProject(zip, progressFill) {
@@ -552,20 +553,29 @@ async function parseKnxProject(zip, progressFill) {
 
     for (const { doc, path } of allDocs) {
         // ApplicationProgram-Elemente: enthalten Name, VisibleDescription, etc.
+        // qAll ist jetzt case-insensitive, also gehen alle Schreibweisen
         const appProgs = qAll(doc, 'ApplicationProgram');
         for (const ap of appProgs) {
             const id = ap.getAttribute('Id') || '';
             const name = ap.getAttribute('Name') || ap.getAttribute('VisibleDescription') || '';
             if (id && name) appProgNames.set(id, name);
         }
-        // Auch CatalogItem/Product mit Text/Description
-        for (const tag of ['CatalogItem', 'Product', 'Hardware2Program']) {
-            const elems = qAll(doc, tag.toLowerCase());
+        // Auch CatalogItem, Product, Hardware2Program, CatalogSection
+        for (const tag of ['CatalogItem', 'Product', 'Hardware2Program', 'CatalogSection', 'ApplicationProgramRef']) {
+            const elems = qAll(doc, tag);
             for (const el of elems) {
-                const id = el.getAttribute('Id') || '';
-                const name = el.getAttribute('Name') || el.getAttribute('Text') || el.getAttribute('VisibleDescription') || '';
+                const id = el.getAttribute('Id') || el.getAttribute('RefId') || '';
+                const name = el.getAttribute('Name') || el.getAttribute('Text')
+                          || el.getAttribute('VisibleDescription') || el.getAttribute('DefaultLanguage') || '';
                 if (id && name && !appProgNames.has(id)) appProgNames.set(id, name);
             }
+        }
+        // Spezial: ComObjectTable → enthält die KO-Beschreibungen als FunctionText
+        const comObjects = qAll(doc, 'ComObject');
+        for (const co of comObjects) {
+            const id = co.getAttribute('Id') || '';
+            const name = co.getAttribute('Name') || co.getAttribute('Text') || co.getAttribute('FunctionText') || '';
+            if (id && name && !appProgNames.has(id)) appProgNames.set(id, name);
         }
     }
     console.log(`KNX Parser: ${appProgNames.size} ApplicationProgram/Catalog-Einträge gefunden`);
@@ -590,17 +600,64 @@ async function parseKnxProject(zip, progressFill) {
         console.log(`KNX Parser: ${devices.length} DeviceInstances in ${path}`);
 
         for (const device of devices) {
-            // Hersteller aus ProductRefId ODER beliebigem Attribut extrahieren
+            // --- Hersteller ermitteln ---
+            // ETS ProductRefId: "M-xxxx_H-..." → Hersteller-Code
+            // ETS ApplicationProgramRef: "M-yyyy_A-..." → kann ANDERER Hersteller sein (z.B. Siemens BCU)
+            // Strategie: ProductRefId-M-Code ist der HARDWARE-Hersteller → bevorzugen
+            //            ApplicationProgramRef-M-Code ist der SOFTWARE/BCU-Hersteller → Fallback
             let manufacturer = 'Unbekannt';
             let mfrId = '';
             const productRefId = device.getAttribute('ProductRefId') || '';
-            const mfrMatch = productRefId.match(/(M-[0-9A-Fa-f]{4})/i);
-            if (mfrMatch) {
-                mfrId = mfrMatch[1].toUpperCase();
+            const appRef = device.getAttribute('ApplicationProgramRef') || '';
+
+            // Alle M-Codes aus ProductRefId extrahieren
+            const allMfrCodes = [];
+            const mfrRegex = /M-([0-9A-Fa-f]{4})/gi;
+            let mfrM;
+            while ((mfrM = mfrRegex.exec(productRefId)) !== null) {
+                allMfrCodes.push('M-' + mfrM[1].toUpperCase());
+            }
+
+            // Hersteller bestimmen: Erster bekannter M-Code aus ProductRefId
+            for (const code of allMfrCodes) {
+                if (MANUFACTURER_MAP[code]) {
+                    mfrId = code;
+                    manufacturer = MANUFACTURER_MAP[code];
+                    break;
+                }
+            }
+            // Falls kein bekannter → ersten nehmen
+            if (manufacturer === 'Unbekannt' && allMfrCodes.length > 0) {
+                mfrId = allMfrCodes[0];
                 manufacturer = MANUFACTURER_MAP[mfrId] || mfrId;
             }
+
+            // Applikationsname finden
+            let appProgName = '';
+            let appMfrId = '';
+            if (appRef) {
+                const appMfrMatch = appRef.match(/(M-[0-9A-Fa-f]{4})/i);
+                if (appMfrMatch) appMfrId = appMfrMatch[1].toUpperCase();
+                if (appProgNames.has(appRef)) {
+                    appProgName = appProgNames.get(appRef);
+                }
+            }
+
+            // WICHTIG: Wenn ProductRefId M-Code = Siemens (M-0004) aber ApplicationProgramRef
+            // einen anderen M-Code hat → ApplicationProgramRef-Hersteller ist der echte Hersteller
+            // (Viele Geräte nutzen Siemens BCU-Hardware, sind aber von anderen Herstellern)
+            if (mfrId === 'M-0004' && appMfrId && appMfrId !== 'M-0004' && MANUFACTURER_MAP[appMfrId]) {
+                mfrId = appMfrId;
+                manufacturer = MANUFACTURER_MAP[appMfrId];
+            }
+            // Umgekehrt: Wenn KEIN Hersteller aus ProductRefId → AppRef nehmen
+            if (manufacturer === 'Unbekannt' && appMfrId && MANUFACTURER_MAP[appMfrId]) {
+                mfrId = appMfrId;
+                manufacturer = MANUFACTURER_MAP[appMfrId];
+            }
+
             if (manufacturer === 'Unbekannt') {
-                // Fallback: beliebiges Attribut mit M-Code
+                // Letzter Fallback: beliebiges Attribut mit M-Code
                 for (const attr of device.attributes) {
                     const m = attr.value.match(/(M-[0-9A-Fa-f]{4})/i);
                     if (m) {
@@ -612,16 +669,19 @@ async function parseKnxProject(zip, progressFill) {
             }
             if (manufacturer === 'Unbekannt') continue;
 
-            // Applikationsname finden: über ApplicationProgramRef oder Prefixe in ProductRefId
-            let appProgName = '';
-            const appRef = device.getAttribute('ApplicationProgramRef') || '';
-            if (appRef && appProgNames.has(appRef)) {
-                appProgName = appProgNames.get(appRef);
-            }
-            // Auch partielle Matches: ProductRefId-Prefix kann auf Katalog/Produkt zeigen
+            // Applikationsname: auch über partielle ID-Matches suchen
             if (!appProgName) {
                 for (const [id, name] of appProgNames) {
                     if (id.startsWith(mfrId) && productRefId.includes(id.split('_')[1] || '---NOMATCH---')) {
+                        appProgName = name;
+                        break;
+                    }
+                }
+            }
+            // Auch mit AppRef-Hersteller suchen
+            if (!appProgName && appMfrId && appMfrId !== mfrId) {
+                for (const [id, name] of appProgNames) {
+                    if (id.startsWith(appMfrId)) {
                         appProgName = name;
                         break;
                     }
@@ -644,7 +704,7 @@ async function parseKnxProject(zip, progressFill) {
                 deviceType,
             });
 
-            console.log(`KNX Device: ${deviceAddr} | ${manufacturer} | ${deviceType} | ${decodeProductRefId(productRefId).substring(0, 60)} | App: ${appProgName.substring(0, 40)}`);
+            console.log(`KNX Device: addr=${deviceAddr} | ${manufacturer} (${mfrId}) | type=${deviceType} | ProductRef=${decodeProductRefId(productRefId).substring(0, 80)} | AppRef=${appRef.substring(0, 50)} | AppName=${appProgName.substring(0, 40)}`);
 
             // ComObjectInstanceRef mit Links-Attribut suchen
             const comObjRefs = qAll(device, 'ComObjectInstanceRef');
