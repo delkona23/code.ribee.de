@@ -118,6 +118,20 @@ let appState = {
 // Init
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+    // Prüfen ob Bibliotheken geladen sind
+    if (typeof dcodeIO === 'undefined' || !dcodeIO.bcrypt) {
+        console.error('bcryptjs nicht geladen!');
+        document.body.innerHTML = '<div style="color:#f85149;padding:2rem;text-align:center;font-family:sans-serif;">'
+            + '<h2>Fehler: Bibliotheken konnten nicht geladen werden.</h2>'
+            + '<p>Bitte Seite neu laden (Strg+Shift+R) oder Adblocker deaktivieren.</p></div>';
+        return;
+    }
+    console.log('KNX2HA: Alle Bibliotheken geladen', {
+        bcrypt: typeof dcodeIO !== 'undefined',
+        jszip: typeof JSZip !== 'undefined',
+        jsyaml: typeof jsyaml !== 'undefined'
+    });
+
     initAuth();
     initTogglePw();
     initDropZones();
@@ -201,16 +215,21 @@ async function handleSetup(e) {
     btn.textContent = 'Wird gespeichert...';
 
     try {
-        const salt = dcodeIO.bcrypt.genSaltSync(10);
-        const hash = dcodeIO.bcrypt.hashSync(pw, salt);
+        console.log('Setup: Starte bcrypt hashing...');
+        const bcrypt = dcodeIO.bcrypt;
+        const salt = bcrypt.genSaltSync(10);
+        const hash = bcrypt.hashSync(pw, salt);
+        console.log('Setup: Hash erstellt, speichere...');
         localStorage.setItem('knx2ha_pw_hash', hash);
+        console.log('Setup: Hash gespeichert, erstelle Session...');
 
         // Create session
         createSession();
+        console.log('Setup: Fertig, zeige App');
         showApp();
     } catch (err) {
-        showError(errorEl, 'Fehler beim Hashen: ' + err.message);
-    } finally {
+        console.error('Setup Fehler:', err);
+        showError(errorEl, 'Fehler beim Speichern: ' + err.message);
         btn.disabled = false;
         btn.textContent = 'Passwort speichern';
     }
