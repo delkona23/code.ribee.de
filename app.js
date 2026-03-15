@@ -5,101 +5,39 @@
 // DPT → Home Assistant Typ Mapping
 // ============================================================
 const DPT_MAP = {
-    '1.001': 'switch',
-    '1.002': 'switch',
-    '1.003': 'switch',
-    '1.008': 'cover',
-    '1.009': 'cover',
-    '1.010': 'cover',
-    '1.011': 'switch',
-    '1.017': 'switch',
-    '1.022': 'binary_sensor',
-    '3.007': 'light',
-    '3.008': 'cover',
-    '5.001': 'light',
-    '5.003': 'sensor',
-    '5.004': 'sensor',
-    '5.005': 'sensor',
-    '5.010': 'sensor',
-    '7.001': 'sensor',
-    '7.012': 'sensor',
-    '7.013': 'sensor',
-    '8.001': 'sensor',
-    '9.001': 'sensor',
-    '9.002': 'sensor',
-    '9.003': 'sensor',
-    '9.004': 'sensor',
-    '9.005': 'sensor',
-    '9.006': 'sensor',
-    '9.007': 'sensor',
-    '9.008': 'sensor',
-    '9.010': 'sensor',
-    '9.011': 'sensor',
-    '9.021': 'sensor',
-    '9.024': 'sensor',
-    '9.025': 'sensor',
-    '9.026': 'sensor',
-    '9.027': 'sensor',
-    '9.028': 'sensor',
-    '10.001': 'sensor',
-    '11.001': 'sensor',
-    '12.001': 'sensor',
-    '13.001': 'sensor',
-    '13.002': 'sensor',
-    '13.010': 'sensor',
-    '13.013': 'sensor',
-    '14.019': 'sensor',
-    '14.027': 'sensor',
-    '14.033': 'sensor',
-    '14.056': 'sensor',
-    '14.068': 'sensor',
-    '14.076': 'sensor',
-    '16.000': 'sensor',
-    '16.001': 'sensor',
-    '17.001': 'sensor',
-    '20.102': 'climate',
-    '20.105': 'climate',
+    '1.001': 'switch', '1.002': 'switch', '1.003': 'switch',
+    '1.008': 'cover', '1.009': 'cover', '1.010': 'cover',
+    '1.011': 'switch', '1.017': 'switch', '1.022': 'binary_sensor',
+    '3.007': 'light', '3.008': 'cover',
+    '5.001': 'light', '5.003': 'sensor', '5.004': 'sensor', '5.005': 'sensor', '5.010': 'sensor',
+    '7.001': 'sensor', '7.012': 'sensor', '7.013': 'sensor', '8.001': 'sensor',
+    '9.001': 'sensor', '9.002': 'sensor', '9.003': 'sensor', '9.004': 'sensor',
+    '9.005': 'sensor', '9.006': 'sensor', '9.007': 'sensor', '9.008': 'sensor',
+    '9.010': 'sensor', '9.011': 'sensor', '9.021': 'sensor', '9.024': 'sensor',
+    '9.025': 'sensor', '9.026': 'sensor', '9.027': 'sensor', '9.028': 'sensor',
+    '10.001': 'sensor', '11.001': 'sensor', '12.001': 'sensor',
+    '13.001': 'sensor', '13.002': 'sensor', '13.010': 'sensor', '13.013': 'sensor',
+    '14.019': 'sensor', '14.027': 'sensor', '14.033': 'sensor',
+    '14.056': 'sensor', '14.068': 'sensor', '14.076': 'sensor',
+    '16.000': 'sensor', '16.001': 'sensor', '17.001': 'sensor',
+    '20.102': 'climate', '20.105': 'climate',
 };
 
-// Sensor-Subtypen für spezifische DPTs
 const SENSOR_TYPE_MAP = {
-    '9.001': 'temperature',
-    '9.002': 'temperature',
-    '9.003': 'temperature',
-    '9.004': 'illuminance',
-    '9.005': 'speed',
-    '9.006': 'pressure',
-    '9.007': 'humidity',
-    '9.008': 'quality',
-    '9.010': 'time',
-    '9.011': 'time',
-    '9.024': 'power',
-    '9.025': 'volume_flow_rate',
-    '9.026': 'speed',
-    '9.028': 'speed',
-    '12.001': 'total_increasing',
-    '13.002': 'volume_flow_rate',
-    '13.010': 'energy',
-    '13.013': 'energy',
-    '14.019': 'current',
-    '14.027': 'current',
-    '14.033': 'frequency',
-    '14.056': 'power',
-    '14.068': 'temperature',
-    '14.076': 'voltage',
+    '9.001': 'temperature', '9.002': 'temperature', '9.003': 'temperature',
+    '9.004': 'illuminance', '9.005': 'speed', '9.006': 'pressure',
+    '9.007': 'humidity', '9.008': 'quality', '9.010': 'time', '9.011': 'time',
+    '9.024': 'power', '9.025': 'volume_flow_rate', '9.026': 'speed', '9.028': 'speed',
+    '12.001': 'total_increasing', '13.002': 'volume_flow_rate',
+    '13.010': 'energy', '13.013': 'energy',
+    '14.019': 'current', '14.027': 'current', '14.033': 'frequency',
+    '14.056': 'power', '14.068': 'temperature', '14.076': 'voltage',
 };
 
-// Hersteller-IDs
 const MANUFACTURER_MAP = {
-    'M-0083': 'Jung',
-    'M-0001': 'ABB',
-    'M-0064': 'ABB',     // Busch-Jaeger
-    'M-0013': 'MDT',
-    'M-0069': 'Theben',
-    'M-0004': 'Siemens',
-    'M-0007': 'Hager',
-    'M-0024': 'Gira',
-    'M-00C8': 'Weinzierl',
+    'M-0083': 'Jung', 'M-0001': 'ABB', 'M-0064': 'ABB',
+    'M-0013': 'MDT', 'M-0069': 'Theben', 'M-0004': 'Siemens',
+    'M-0007': 'Hager', 'M-0024': 'Gira', 'M-00C8': 'Weinzierl',
 };
 
 // ============================================================
@@ -108,67 +46,93 @@ const MANUFACTURER_MAP = {
 let appState = {
     failedAttempts: 0,
     lockoutUntil: 0,
-    parsedGAs: [],         // [{address, name, description, dpt, manufacturer, haType, selected}]
-    existingYaml: null,    // Parsed existing YAML
+    currentUser: null,
+    parsedGAs: [],
+    existingYaml: null,
     existingAddresses: new Set(),
     currentStep: 1,
 };
 
 // ============================================================
+// STORAGE HELPERS – Multi-User
+// ============================================================
+// User storage format: knx2ha_users = [{username, hash, role}]
+function getUsers() {
+    try {
+        return JSON.parse(localStorage.getItem('knx2ha_users') || '[]');
+    } catch { return []; }
+}
+
+function saveUsers(users) {
+    localStorage.setItem('knx2ha_users', JSON.stringify(users));
+}
+
+function hasAnyUser() {
+    return getUsers().length > 0;
+}
+
+function findUser(username) {
+    return getUsers().find(u => u.username.toLowerCase() === username.toLowerCase());
+}
+
+// ============================================================
 // Init
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Prüfen ob Bibliotheken geladen sind
     if (typeof dcodeIO === 'undefined' || !dcodeIO.bcrypt) {
-        console.error('bcryptjs nicht geladen!');
         document.body.innerHTML = '<div style="color:#f85149;padding:2rem;text-align:center;font-family:sans-serif;">'
             + '<h2>Fehler: Bibliotheken konnten nicht geladen werden.</h2>'
             + '<p>Bitte Seite neu laden (Strg+Shift+R) oder Adblocker deaktivieren.</p></div>';
         return;
     }
-    console.log('KNX2HA: Alle Bibliotheken geladen', {
-        bcrypt: typeof dcodeIO !== 'undefined',
-        jszip: typeof JSZip !== 'undefined',
-        jsyaml: typeof jsyaml !== 'undefined'
-    });
+
+    // Migrate old single-user hash to multi-user format
+    migrateOldAuth();
 
     initAuth();
     initTogglePw();
     initDropZones();
     initNavigation();
     initYamlActions();
+    initAdmin();
 });
+
+function migrateOldAuth() {
+    const oldHash = localStorage.getItem('knx2ha_pw_hash');
+    if (oldHash && !hasAnyUser()) {
+        saveUsers([{ username: 'admin', hash: oldHash, role: 'admin' }]);
+        localStorage.removeItem('knx2ha_pw_hash');
+    }
+}
 
 // ============================================================
 // AUTH MODULE
 // ============================================================
 function initAuth() {
-    const hasPassword = localStorage.getItem('knx2ha_pw_hash');
     const setupForm = document.getElementById('setup-form');
     const loginForm = document.getElementById('login-form');
 
-    if (hasPassword) {
+    if (hasAnyUser()) {
         loginForm.classList.remove('hidden');
     } else {
         setupForm.classList.remove('hidden');
     }
 
-    // Setup form
     setupForm.addEventListener('submit', handleSetup);
+    loginForm.addEventListener('submit', handleLogin);
+    document.getElementById('logout-btn').addEventListener('click', handleLogout);
     initPasswordRequirements();
 
-    // Login form
-    loginForm.addEventListener('submit', handleLogin);
-
-    // Reset password
-    document.getElementById('reset-pw-btn').addEventListener('click', handleResetPassword);
-
-    // Logout
-    document.getElementById('logout-btn').addEventListener('click', handleLogout);
-
-    // Check existing session
-    if (sessionStorage.getItem('knx2ha_session')) {
-        showApp();
+    // Restore session
+    const session = sessionStorage.getItem('knx2ha_session');
+    if (session) {
+        try {
+            const s = JSON.parse(session);
+            if (s && s.username) {
+                appState.currentUser = s;
+                showApp();
+            }
+        } catch {}
     }
 }
 
@@ -193,19 +157,22 @@ function validatePassword(pw) {
     return null;
 }
 
-async function handleSetup(e) {
+function handleSetup(e) {
     e.preventDefault();
+    const username = document.getElementById('setup-username').value.trim();
     const pw = document.getElementById('setup-password').value;
-    const confirm = document.getElementById('setup-confirm').value;
+    const confirmPw = document.getElementById('setup-confirm').value;
     const errorEl = document.getElementById('setup-error');
 
-    const validationError = validatePassword(pw);
-    if (validationError) {
-        showError(errorEl, validationError);
+    if (!username || username.length < 2) {
+        showError(errorEl, 'Benutzername muss mindestens 2 Zeichen lang sein.');
         return;
     }
 
-    if (pw !== confirm) {
+    const validationError = validatePassword(pw);
+    if (validationError) { showError(errorEl, validationError); return; }
+
+    if (pw !== confirmPw) {
         showError(errorEl, 'Passwörter stimmen nicht überein.');
         return;
     }
@@ -215,40 +182,36 @@ async function handleSetup(e) {
     btn.textContent = 'Wird gespeichert...';
 
     try {
-        console.log('Setup: Starte bcrypt hashing...');
         const bcrypt = dcodeIO.bcrypt;
-        const salt = bcrypt.genSaltSync(10);
-        const hash = bcrypt.hashSync(pw, salt);
-        console.log('Setup: Hash erstellt, speichere...');
-        localStorage.setItem('knx2ha_pw_hash', hash);
-        console.log('Setup: Hash gespeichert, erstelle Session...');
+        const hash = bcrypt.hashSync(pw, bcrypt.genSaltSync(10));
+        saveUsers([{ username, hash, role: 'admin' }]);
 
-        // Create session
-        createSession();
-        console.log('Setup: Fertig, zeige App');
+        // Verify it was saved
+        if (!hasAnyUser()) {
+            throw new Error('Speichern fehlgeschlagen – localStorage blockiert?');
+        }
+
+        createSession(username, 'admin');
         showApp();
     } catch (err) {
-        console.error('Setup Fehler:', err);
-        showError(errorEl, 'Fehler beim Speichern: ' + err.message);
+        showError(errorEl, 'Fehler: ' + err.message);
         btn.disabled = false;
-        btn.textContent = 'Passwort speichern';
+        btn.textContent = 'Admin-Konto erstellen';
     }
 }
 
-async function handleLogin(e) {
+function handleLogin(e) {
     e.preventDefault();
+    const username = document.getElementById('login-username').value.trim();
     const pw = document.getElementById('login-password').value;
     const errorEl = document.getElementById('login-error');
     const lockoutEl = document.getElementById('lockout-msg');
     const btn = document.getElementById('login-btn');
 
-    // Rate limiting check
-    if (Date.now() < appState.lockoutUntil) {
-        return;
-    }
+    if (Date.now() < appState.lockoutUntil) return;
 
-    if (!pw) {
-        showError(errorEl, 'Bitte Passwort eingeben.');
+    if (!username || !pw) {
+        showError(errorEl, 'Bitte Benutzername und Passwort eingeben.');
         return;
     }
 
@@ -257,21 +220,21 @@ async function handleLogin(e) {
     errorEl.classList.add('hidden');
 
     try {
-        const hash = localStorage.getItem('knx2ha_pw_hash');
-        const match = dcodeIO.bcrypt.compareSync(pw, hash);
+        const user = findUser(username);
+        if (!user) {
+            appState.failedAttempts++;
+            handleFailedAttempt(errorEl, lockoutEl, btn);
+            return;
+        }
 
+        const match = dcodeIO.bcrypt.compareSync(pw, user.hash);
         if (match) {
             appState.failedAttempts = 0;
-            createSession();
+            createSession(user.username, user.role);
             showApp();
         } else {
             appState.failedAttempts++;
-            if (appState.failedAttempts >= 5) {
-                startLockout(lockoutEl, btn);
-            } else {
-                const remaining = 5 - appState.failedAttempts;
-                showError(errorEl, `Falsches Passwort. Noch ${remaining} Versuch${remaining === 1 ? '' : 'e'}.`);
-            }
+            handleFailedAttempt(errorEl, lockoutEl, btn);
         }
     } catch (err) {
         showError(errorEl, 'Fehler: ' + err.message);
@@ -281,14 +244,23 @@ async function handleLogin(e) {
     }
 }
 
+function handleFailedAttempt(errorEl, lockoutEl, btn) {
+    if (appState.failedAttempts >= 5) {
+        startLockout(lockoutEl, btn);
+    } else {
+        const remaining = 5 - appState.failedAttempts;
+        showError(errorEl, `Benutzername oder Passwort falsch. Noch ${remaining} Versuch${remaining === 1 ? '' : 'e'}.`);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Anmelden';
+}
+
 function startLockout(lockoutEl, btn) {
-    const errorEl = document.getElementById('login-error');
-    errorEl.classList.add('hidden');
+    document.getElementById('login-error').classList.add('hidden');
     lockoutEl.classList.remove('hidden');
     btn.disabled = true;
     appState.lockoutUntil = Date.now() + 30000;
     let remaining = 30;
-
     const timer = setInterval(() => {
         remaining--;
         document.getElementById('lockout-timer').textContent = remaining;
@@ -301,22 +273,16 @@ function startLockout(lockoutEl, btn) {
     }, 1000);
 }
 
-function handleResetPassword() {
-    if (confirm('Passwort wirklich zurücksetzen? Alle gespeicherten Daten werden gelöscht.')) {
-        localStorage.removeItem('knx2ha_pw_hash');
-        sessionStorage.removeItem('knx2ha_session');
-        location.reload();
-    }
-}
-
 function handleLogout() {
     sessionStorage.removeItem('knx2ha_session');
+    appState.currentUser = null;
     location.reload();
 }
 
-function createSession() {
-    const token = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
-    sessionStorage.setItem('knx2ha_session', token);
+function createSession(username, role) {
+    const session = { username, role, token: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) };
+    sessionStorage.setItem('knx2ha_session', JSON.stringify(session));
+    appState.currentUser = session;
 }
 
 function showApp() {
@@ -324,6 +290,14 @@ function showApp() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app-screen').classList.remove('hidden');
     document.getElementById('app-screen').classList.add('active');
+
+    // Show current user
+    if (appState.currentUser) {
+        document.getElementById('current-user').textContent = appState.currentUser.username;
+        if (appState.currentUser.role === 'admin') {
+            document.getElementById('admin-btn').classList.remove('hidden');
+        }
+    }
 }
 
 function showError(el, msg) {
@@ -338,6 +312,98 @@ function initTogglePw() {
             input.type = input.type === 'password' ? 'text' : 'password';
         });
     });
+}
+
+// ============================================================
+// ADMIN MODULE – Benutzerverwaltung
+// ============================================================
+function initAdmin() {
+    document.getElementById('admin-btn').addEventListener('click', openAdmin);
+    document.getElementById('admin-close').addEventListener('click', closeAdmin);
+    document.querySelector('.modal-backdrop')?.addEventListener('click', closeAdmin);
+    document.getElementById('add-user-form').addEventListener('submit', handleAddUser);
+}
+
+function openAdmin() {
+    document.getElementById('admin-modal').classList.remove('hidden');
+    renderUserList();
+}
+
+function closeAdmin() {
+    document.getElementById('admin-modal').classList.add('hidden');
+}
+
+function renderUserList() {
+    const list = document.getElementById('user-list');
+    const users = getUsers();
+    list.innerHTML = '';
+
+    users.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'user-item';
+        const isCurrentUser = appState.currentUser && appState.currentUser.username === u.username;
+        div.innerHTML = `
+            <div class="user-info">
+                <span>${escHtml(u.username)}</span>
+                <span class="role-badge">${u.role}</span>
+                ${isCurrentUser ? '<span style="color:var(--success);font-size:0.75rem">(Du)</span>' : ''}
+            </div>
+            ${!isCurrentUser ? `<button class="btn-delete" data-user="${escHtml(u.username)}" title="Benutzer löschen">&times;</button>` : ''}
+        `;
+        list.appendChild(div);
+    });
+
+    // Delete handler
+    list.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const username = btn.dataset.user;
+            if (confirm(`Benutzer "${username}" wirklich löschen?`)) {
+                const users = getUsers().filter(u => u.username !== username);
+                saveUsers(users);
+                renderUserList();
+            }
+        });
+    });
+}
+
+function handleAddUser(e) {
+    e.preventDefault();
+    const username = document.getElementById('new-username').value.trim();
+    const pw = document.getElementById('new-password').value;
+    const errorEl = document.getElementById('add-user-error');
+    const successEl = document.getElementById('add-user-success');
+
+    errorEl.classList.add('hidden');
+    successEl.classList.add('hidden');
+
+    if (!username || username.length < 2) {
+        showError(errorEl, 'Benutzername muss mindestens 2 Zeichen lang sein.');
+        return;
+    }
+
+    if (findUser(username)) {
+        showError(errorEl, 'Benutzername existiert bereits.');
+        return;
+    }
+
+    const validationError = validatePassword(pw);
+    if (validationError) { showError(errorEl, validationError); return; }
+
+    try {
+        const bcrypt = dcodeIO.bcrypt;
+        const hash = bcrypt.hashSync(pw, bcrypt.genSaltSync(10));
+        const users = getUsers();
+        users.push({ username, hash, role: 'user' });
+        saveUsers(users);
+
+        successEl.textContent = `Benutzer "${username}" wurde angelegt.`;
+        successEl.classList.remove('hidden');
+        document.getElementById('new-username').value = '';
+        document.getElementById('new-password').value = '';
+        renderUserList();
+    } catch (err) {
+        showError(errorEl, 'Fehler: ' + err.message);
+    }
 }
 
 // ============================================================
@@ -357,16 +423,10 @@ function initNavigation() {
 }
 
 function goToStep(step) {
-    if (step === 2 && appState.parsedGAs.length === 0) {
-        return;
-    }
-    if (step === 3) {
-        generateYaml();
-    }
-
+    if (step === 2 && appState.parsedGAs.length === 0) return;
+    if (step === 3) generateYaml();
     appState.currentStep = step;
 
-    // Update step content (hidden UND active toggling)
     document.querySelectorAll('.step-content').forEach(el => {
         el.classList.remove('active');
         el.classList.add('hidden');
@@ -375,7 +435,6 @@ function goToStep(step) {
     target.classList.remove('hidden');
     target.classList.add('active');
 
-    // Update step indicator
     document.querySelectorAll('.step-indicator .step').forEach(el => {
         const s = parseInt(el.dataset.step);
         el.classList.remove('active', 'completed');
@@ -383,11 +442,8 @@ function goToStep(step) {
         else if (s < step) el.classList.add('completed');
     });
 
-    // Update step lines
     const lines = document.querySelectorAll('.step-line');
-    lines.forEach((line, i) => {
-        line.classList.toggle('completed', i + 1 < step);
-    });
+    lines.forEach((line, i) => line.classList.toggle('completed', i + 1 < step));
 }
 
 function resetApp() {
@@ -408,57 +464,29 @@ function resetApp() {
 // FILE DROP ZONES
 // ============================================================
 function initDropZones() {
-    // KNX project drop zone
-    const dropZone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('file-input');
+    setupDropZone('drop-zone', 'file-input', handleKnxFile);
+    setupDropZone('yaml-drop-zone', 'yaml-file-input', handleYamlFile);
+}
 
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
-    });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file) handleKnxFile(file);
-    });
-    dropZone.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') {
-            fileInput.click();
-        }
-    });
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files[0]) handleKnxFile(fileInput.files[0]);
-    });
+function setupDropZone(zoneId, inputId, handler) {
+    const zone = document.getElementById(zoneId);
+    const input = document.getElementById(inputId);
 
-    // YAML drop zone
-    const yamlDropZone = document.getElementById('yaml-drop-zone');
-    const yamlInput = document.getElementById('yaml-file-input');
-
-    yamlDropZone.addEventListener('dragover', (e) => {
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', (e) => {
         e.preventDefault();
-        yamlDropZone.classList.add('drag-over');
+        zone.classList.remove('drag-over');
+        if (e.dataTransfer.files[0]) handler(e.dataTransfer.files[0]);
     });
-    yamlDropZone.addEventListener('dragleave', () => yamlDropZone.classList.remove('drag-over'));
-    yamlDropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        yamlDropZone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file) handleYamlFile(file);
+    zone.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') input.click();
     });
-    yamlDropZone.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') {
-            yamlInput.click();
-        }
-    });
-    yamlInput.addEventListener('change', () => {
-        if (yamlInput.files[0]) handleYamlFile(yamlInput.files[0]);
-    });
+    input.addEventListener('change', () => { if (input.files[0]) handler(input.files[0]); });
 }
 
 // ============================================================
-// KNX PROJECT PARSER
+// KNX PROJECT PARSER – Namespace-agnostisch
 // ============================================================
 async function handleKnxFile(file) {
     if (!file.name.endsWith('.knxproj')) {
@@ -477,19 +505,15 @@ async function handleKnxFile(file) {
     try {
         const zip = await JSZip.loadAsync(file);
         progressFill.style.width = '30%';
-
         const gasResult = await parseKnxProject(zip, progressFill);
         progressFill.style.width = '90%';
-
         appState.parsedGAs = gasResult;
         renderGATable(gasResult);
-
         progressFill.style.width = '100%';
         setTimeout(() => {
             loading.classList.add('hidden');
             document.getElementById('parse-results').classList.remove('hidden');
         }, 300);
-
     } catch (err) {
         console.error('Parse error:', err);
         loading.classList.add('hidden');
@@ -498,266 +522,179 @@ async function handleKnxFile(file) {
     }
 }
 
+// Namespace-agnostischer Selektor: nutzt localName statt tagName
+function qAll(doc, localName) {
+    return Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === localName);
+}
+
 async function parseKnxProject(zip, progressFill) {
-    // Collect all XML files
     const xmlFiles = [];
     zip.forEach((path, entry) => {
-        if (path.endsWith('.xml') && !entry.dir) {
-            xmlFiles.push({ path, entry });
-        }
+        if (path.endsWith('.xml') && !entry.dir) xmlFiles.push({ path, entry });
     });
 
-    if (xmlFiles.length === 0) {
-        throw new Error('Keine XML-Dateien in der .knxproj gefunden. Ist dies eine gültige ETS-Projektdatei?');
-    }
+    if (xmlFiles.length === 0) throw new Error('Keine XML-Dateien gefunden.');
+    console.log(`KNX Parser: ${xmlFiles.length} XML-Dateien`);
 
-    console.log(`KNX Parser: ${xmlFiles.length} XML-Dateien gefunden`);
-
-    // ---- Phase 1: Alle XML-Dateien laden und klassifizieren ----
-    const projectDocs = [];   // Enthalten GA-Definitionen + Geräte-Zuordnungen
-    const manufacturerIds = new Map(); // ComObjectRef-ID → Hersteller
-
-    progressFill.style.width = '20%';
-
+    // Load all XML files
+    const allDocs = [];
     for (const { path, entry } of xmlFiles) {
         try {
             const content = await entry.async('text');
             const doc = new DOMParser().parseFromString(content, 'text/xml');
-
-            // Hersteller aus dem Dateipfad extrahieren (M-xxxx in Pfad)
-            const mMatch = path.match(/(M-[0-9A-Fa-f]{4})/i);
-            if (mMatch) {
-                const mId = mMatch[1].toUpperCase();
-                const mName = MANUFACTURER_MAP[mId] || mId;
-                // Alle IDs in dieser Datei dem Hersteller zuordnen
-                doc.querySelectorAll('[Id]').forEach(el => {
-                    const id = el.getAttribute('Id');
-                    if (id) manufacturerIds.set(id, mName);
-                });
-            }
-
-            // Projektdateien merken (enthalten GroupAddress und/oder DeviceInstance)
-            if (doc.querySelector('GroupAddress') || doc.querySelector('DeviceInstance') ||
-                doc.querySelector('GroupRange') || doc.querySelector('Area')) {
-                projectDocs.push({ doc, path });
-            }
-        } catch (e) {
-            // Fehlerhafte Dateien überspringen
-        }
+            allDocs.push({ doc, path, content });
+        } catch (e) { /* skip */ }
     }
 
     progressFill.style.width = '40%';
-    console.log(`KNX Parser: ${projectDocs.length} Projektdateien, ${manufacturerIds.size} Hersteller-Referenzen`);
 
-    // ---- Phase 2: GA → ComObjectRef → Gerät → Hersteller Verknüpfung ----
-    // Schritt A: ComObjectInstanceRef Sends → GroupAddress-ID Mapping aufbauen
-    const gaIdToManufacturer = new Map();  // GA-Id → Hersteller
-    const gaIdToDpt = new Map();           // GA-Id → DPT (aus Connectors)
+    // Phase 1: Build GA-RefId → Manufacturer mapping via DeviceInstance → ComObjectInstanceRef → Send/Receive
+    const gaRefToManufacturer = new Map();
+    const gaRefToDpt = new Map();
 
-    for (const { doc } of projectDocs) {
-        // DeviceInstances durchgehen
-        const deviceInstances = doc.querySelectorAll('DeviceInstance');
-        deviceInstances.forEach(device => {
-            // Hersteller aus der ProductRefId oder dem Id ableiten
-            const productRef = device.getAttribute('ProductRefId') || '';
-            const deviceId = device.getAttribute('Id') || '';
+    for (const { doc, path } of allDocs) {
+        const devices = qAll(doc, 'DeviceInstance');
+        if (devices.length === 0) continue;
+
+        console.log(`KNX Parser: ${devices.length} DeviceInstances in ${path}`);
+
+        for (const device of devices) {
+            // Find manufacturer from ProductRefId or Hardware2ProgramRefId
             let manufacturer = 'Unbekannt';
-
-            // Hersteller-ID aus ProductRefId extrahieren (z.B. M-0069_H-0001....)
-            const mMatch = productRef.match(/(M-[0-9A-Fa-f]{4})/i) ||
-                           deviceId.match(/(M-[0-9A-Fa-f]{4})/i);
-            if (mMatch) {
-                const mId = mMatch[1].toUpperCase();
-                manufacturer = MANUFACTURER_MAP[mId] || mId;
+            for (const attr of ['ProductRefId', 'Hardware2ProgramRefId', 'Id']) {
+                const val = device.getAttribute(attr) || '';
+                const m = val.match(/(M-[0-9A-Fa-f]{4})/i);
+                if (m) {
+                    manufacturer = MANUFACTURER_MAP[m[1].toUpperCase()] || m[1].toUpperCase();
+                    break;
+                }
             }
 
-            // Alle ComObjectInstanceRef → Send → GroupAddressRefId finden
-            const connectors = device.querySelectorAll('Send, Receive');
-            connectors.forEach(conn => {
+            if (manufacturer === 'Unbekannt') continue;
+
+            // Find all Send and Receive connectors under this device
+            const sends = qAll(device, 'Send');
+            const receives = qAll(device, 'Receive');
+            const connectors = [...sends, ...receives];
+
+            for (const conn of connectors) {
                 const gaRefId = conn.getAttribute('GroupAddressRefId');
-                if (gaRefId && manufacturer !== 'Unbekannt') {
-                    gaIdToManufacturer.set(gaRefId, manufacturer);
-                }
+                if (!gaRefId) continue;
+                gaRefToManufacturer.set(gaRefId, manufacturer);
 
-                // DPT aus Connector-Kontext (DatapointType des ComObjectInstanceRef)
-                const comObjRef = conn.closest('ComObjectInstanceRef');
-                if (comObjRef && gaRefId) {
-                    const dpst = comObjRef.getAttribute('DatapointType') ||
-                                 comObjRef.getAttribute('ReadFlag') ? '' : '';
-                    // DPT manchmal auf übergeordnetem Element
-                    const parentDpt = comObjRef.getAttribute('DatapointType');
-                    if (parentDpt) {
-                        gaIdToDpt.set(gaRefId, normalizeDpt(parentDpt));
-                    }
+                // Try to get DPT from parent ComObjectInstanceRef
+                const parent = conn.parentElement;
+                if (parent) {
+                    const dpt = parent.getAttribute('DatapointType');
+                    if (dpt) gaRefToDpt.set(gaRefId, normalizeDpt(dpt));
                 }
-            });
-
-            // Alternative: Direkte GroupAddressRefId in ComObjectInstanceRef
-            const comObjRefs = device.querySelectorAll('ComObjectInstanceRef');
-            comObjRefs.forEach(ref => {
-                const connSend = ref.querySelector('Send');
-                const connRecv = ref.querySelector('Receive');
-                const gaRef = connSend?.getAttribute('GroupAddressRefId') ||
-                              connRecv?.getAttribute('GroupAddressRefId');
-                if (gaRef && manufacturer !== 'Unbekannt') {
-                    gaIdToManufacturer.set(gaRef, manufacturer);
-                }
-                const dpt = ref.getAttribute('DatapointType');
-                if (dpt && gaRef) {
-                    gaIdToDpt.set(gaRef, normalizeDpt(dpt));
-                }
-            });
-        });
+            }
+        }
     }
 
     progressFill.style.width = '60%';
-    console.log(`KNX Parser: ${gaIdToManufacturer.size} GA-Hersteller-Zuordnungen`);
+    console.log(`KNX Parser: ${gaRefToManufacturer.size} GA→Hersteller Zuordnungen`);
 
-    // ---- Phase 3: Gruppenadressen extrahieren ----
+    // Phase 2: Extract GroupAddresses
     const groupAddresses = [];
 
-    for (const { doc } of projectDocs) {
-        const gaElements = doc.querySelectorAll('GroupAddress');
-        gaElements.forEach(ga => {
+    for (const { doc, path } of allDocs) {
+        const gaElements = qAll(doc, 'GroupAddress');
+        if (gaElements.length === 0) continue;
+
+        console.log(`KNX Parser: ${gaElements.length} GroupAddresses in ${path}`);
+
+        for (const ga of gaElements) {
             const address = parseGroupAddress(ga.getAttribute('Address'));
             const name = ga.getAttribute('Name') || '';
             const description = ga.getAttribute('Description') || '';
             const id = ga.getAttribute('Id') || '';
 
-            if (!address) return;
+            if (!address) continue;
 
-            // DPT: direkt am GA-Element, oder aus Connector-Zuordnung
+            // DPT from GA element or from connector mapping
             let dpt = normalizeDpt(ga.getAttribute('DatapointType') || '');
-            if (!dpt && gaIdToDpt.has(id)) {
-                dpt = gaIdToDpt.get(id);
-            }
+            if (!dpt && gaRefToDpt.has(id)) dpt = gaRefToDpt.get(id);
 
-            // Hersteller: aus GA-ID → Device Mapping
-            let manufacturer = gaIdToManufacturer.get(id) || 'Unbekannt';
-
-            // Fallback: Hersteller-ID direkt im GA-Id suchen
+            // Manufacturer from connector mapping or from ID
+            let manufacturer = gaRefToManufacturer.get(id) || 'Unbekannt';
             if (manufacturer === 'Unbekannt') {
-                const mMatch = id.match(/(M-[0-9A-Fa-f]{4})/i);
-                if (mMatch) {
-                    const mId = mMatch[1].toUpperCase();
-                    manufacturer = MANUFACTURER_MAP[mId] || mId;
-                }
+                const m = id.match(/(M-[0-9A-Fa-f]{4})/i);
+                if (m) manufacturer = MANUFACTURER_MAP[m[1].toUpperCase()] || m[1].toUpperCase();
             }
 
-            // HA-Typ bestimmen
+            // HA type
             let haType = dpt ? (DPT_MAP[dpt] || 'unknown') : 'unknown';
-            if (haType === 'unknown') {
-                haType = guessTypeFromName(name);
-            }
+            if (haType === 'unknown') haType = guessTypeFromName(name);
 
-            groupAddresses.push({
-                address,
-                name: name.trim(),
-                description: description.trim(),
-                dpt: dpt || '—',
-                manufacturer,
-                haType,
-                selected: true,
-            });
-        });
+            groupAddresses.push({ address, name: name.trim(), description: description.trim(), dpt: dpt || '—', manufacturer, haType, selected: true });
+        }
     }
 
     progressFill.style.width = '80%';
 
-    // Deduplizieren
-    const seen = new Set();
-    const unique = [];
+    // Deduplicate
+    const seen = new Map();
     for (const ga of groupAddresses) {
         if (!seen.has(ga.address)) {
-            seen.add(ga.address);
-            unique.push(ga);
+            seen.set(ga.address, ga);
         } else {
-            // Wenn Duplikat bessere Infos hat, aktualisieren
-            const existing = unique.find(u => u.address === ga.address);
-            if (existing && existing.manufacturer === 'Unbekannt' && ga.manufacturer !== 'Unbekannt') {
-                existing.manufacturer = ga.manufacturer;
-            }
-            if (existing && existing.dpt === '—' && ga.dpt !== '—') {
-                existing.dpt = ga.dpt;
-            }
+            const existing = seen.get(ga.address);
+            if (existing.manufacturer === 'Unbekannt' && ga.manufacturer !== 'Unbekannt') existing.manufacturer = ga.manufacturer;
+            if (existing.dpt === '—' && ga.dpt !== '—') existing.dpt = ga.dpt;
         }
     }
 
-    // Sortieren nach Adresse
-    unique.sort((a, b) => {
+    const unique = Array.from(seen.values()).sort((a, b) => {
         const pa = a.address.split('/').map(Number);
         const pb = b.address.split('/').map(Number);
         return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2];
     });
 
-    console.log(`KNX Parser: ${unique.length} eindeutige Gruppenadressen gefunden`);
+    console.log(`KNX Parser: ${unique.length} eindeutige Gruppenadressen`);
+    if (gaRefToManufacturer.size === 0) {
+        console.warn('KNX Parser: Keine Hersteller-Zuordnungen gefunden. Die .knxproj enthält möglicherweise keine Geräte-Zuordnungen.');
+    }
+
     return unique;
 }
 
 function parseGroupAddress(raw) {
     if (!raw) return null;
-
-    // Already in 3-level format
     if (/^\d+\/\d+\/\d+$/.test(raw)) return raw;
-
-    // Numeric (16-bit integer) → convert to 3-level
     const num = parseInt(raw, 10);
     if (!isNaN(num) && num > 0 && num <= 65535) {
-        const main = (num >> 11) & 0x1f;
-        const middle = (num >> 8) & 0x07;
-        const sub = num & 0xff;
-        return `${main}/${middle}/${sub}`;
+        return `${(num >> 11) & 0x1f}/${(num >> 8) & 0x07}/${num & 0xff}`;
     }
-
-    // 2-level format
     if (/^\d+\/\d+$/.test(raw)) {
-        const parts = raw.split('/');
-        return `${parts[0]}/0/${parts[1]}`;
+        const p = raw.split('/');
+        return `${p[0]}/0/${p[1]}`;
     }
-
     return null;
 }
 
 function normalizeDpt(raw) {
     if (!raw) return '';
-
-    // Handle ETS format like "DPST-1-1" or "DPT-1" or "1.001"
-    let match = raw.match(/DPST?-(\d+)-(\d+)/i);
-    if (match) return `${parseInt(match[1])}.${match[2].padStart(3, '0')}`;
-
-    match = raw.match(/DPT-(\d+)/i);
-    if (match) return `${parseInt(match[1])}.001`;
-
-    match = raw.match(/^(\d+)\.(\d+)$/);
-    if (match) return `${parseInt(match[1])}.${match[2].padStart(3, '0')}`;
-
+    let m = raw.match(/DPST?-(\d+)-(\d+)/i);
+    if (m) return `${parseInt(m[1])}.${m[2].padStart(3, '0')}`;
+    m = raw.match(/DPT-(\d+)/i);
+    if (m) return `${parseInt(m[1])}.001`;
+    m = raw.match(/^(\d+)\.(\d+)$/);
+    if (m) return `${parseInt(m[1])}.${m[2].padStart(3, '0')}`;
     return '';
 }
 
 function guessTypeFromName(name) {
     const n = name.toLowerCase();
-
-    // Cover / Rolladen
     if (/roll(o|aden|lade)|jalousie|lamel|beschatt|markise|rollo/i.test(n)) return 'cover';
     if (/auf.?ab|position|behang|fahr/i.test(n)) return 'cover';
-
-    // Climate / Heating
     if (/heiz|temperatur|thermostat|ventil|stellgr|soll.?temp|ist.?temp|hvac|klima/i.test(n)) return 'climate';
-
-    // Light / Dimming
     if (/licht|dimm|leucht|beleucht|lampe|spot|led|decke.*licht/i.test(n)) return 'light';
     if (/helligk/i.test(n) && !/sensor/i.test(n)) return 'light';
-
-    // Sensor
     if (/sensor|messung|mess|wind|regen|feuchte|co2|luft|außen.?temp/i.test(n)) return 'sensor';
     if (/helligk.*sensor|luxwert|helligkeit/i.test(n)) return 'sensor';
-
-    // Binary Sensor
     if (/taster|taste|eingang|meld|status|rückm|alarm|fenster.*kontakt|präsenz/i.test(n)) return 'binary_sensor';
-
-    // Switch
     if (/schalt|steckdose|steck|aktor|ausgang|pumpe|lüfter|ventilator/i.test(n)) return 'switch';
-
     return 'unknown';
 }
 
@@ -767,11 +704,8 @@ function guessTypeFromName(name) {
 function renderGATable(gas) {
     const tbody = document.getElementById('ga-table-body');
     tbody.innerHTML = '';
-
     document.getElementById('ga-count').textContent = `${gas.length} Adressen`;
-
-    // Count unique manufacturers
-    const mfrs = new Set(gas.map(g => g.manufacturer));
+    const mfrs = new Set(gas.map(g => g.manufacturer).filter(m => m !== 'Unbekannt'));
     document.getElementById('device-count').textContent = `${mfrs.size} Hersteller`;
 
     gas.forEach((ga, idx) => {
@@ -799,23 +733,19 @@ function renderGATable(gas) {
         tbody.appendChild(tr);
     });
 
-    // Event: checkbox toggle
     tbody.addEventListener('change', (e) => {
         if (e.target.type === 'checkbox') {
-            const idx = parseInt(e.target.dataset.idx);
-            appState.parsedGAs[idx].selected = e.target.checked;
+            appState.parsedGAs[parseInt(e.target.dataset.idx)].selected = e.target.checked;
         }
         if (e.target.classList.contains('ha-type-select')) {
             const idx = parseInt(e.target.dataset.idx);
             appState.parsedGAs[idx].haType = e.target.value;
-            // Update badge
             const badge = e.target.closest('tr').querySelector('.type-badge');
             badge.className = `type-badge ${e.target.value}`;
             badge.textContent = typeLabel(e.target.value);
         }
     });
 
-    // Select all
     document.getElementById('select-all').addEventListener('change', (e) => {
         const checked = e.target.checked;
         tbody.querySelectorAll('input[type="checkbox"]').forEach(cb => {
@@ -825,7 +755,6 @@ function renderGATable(gas) {
         });
     });
 
-    // Filter
     initTableFilters();
 }
 
@@ -838,22 +767,16 @@ function initTableFilters() {
         const q = search.value.toLowerCase();
         const type = typeFilter.value;
         const mfr = mfrFilter.value;
-        const rows = document.querySelectorAll('#ga-table-body tr');
-
-        rows.forEach((row, idx) => {
+        document.querySelectorAll('#ga-table-body tr').forEach((row, idx) => {
             const ga = appState.parsedGAs[idx];
             if (!ga) return;
-
             let show = true;
-            if (q && !ga.name.toLowerCase().includes(q) && !ga.address.includes(q) && !ga.description.toLowerCase().includes(q)) {
-                show = false;
-            }
+            if (q && !ga.name.toLowerCase().includes(q) && !ga.address.includes(q) && !ga.description.toLowerCase().includes(q)) show = false;
             if (type && ga.haType !== type) show = false;
             if (mfr) {
                 if (mfr === 'unknown' && ga.manufacturer !== 'Unbekannt') show = false;
                 else if (mfr !== 'unknown' && ga.manufacturer !== mfr) show = false;
             }
-
             row.style.display = show ? '' : 'none';
         });
     };
@@ -864,12 +787,7 @@ function initTableFilters() {
 }
 
 function typeLabel(type) {
-    const labels = {
-        light: 'Licht', switch: 'Schalter', cover: 'Rolladen',
-        climate: 'Heizung', sensor: 'Sensor', binary_sensor: 'Binärsensor',
-        unknown: 'Unbekannt',
-    };
-    return labels[type] || type;
+    return { light: 'Licht', switch: 'Schalter', cover: 'Rolladen', climate: 'Heizung', sensor: 'Sensor', binary_sensor: 'Binärsensor', unknown: 'Unbekannt' }[type] || type;
 }
 
 function escHtml(str) {
@@ -892,70 +810,43 @@ async function handleYamlFile(file) {
     try {
         const content = await file.text();
         const parsed = jsyaml.load(content);
-
-        if (!parsed || typeof parsed !== 'object') {
-            throw new Error('Die Datei enthält keine gültigen YAML-Daten.');
-        }
+        if (!parsed || typeof parsed !== 'object') throw new Error('Keine gültigen YAML-Daten.');
 
         appState.existingYaml = parsed;
         appState.existingAddresses = extractExistingAddresses(parsed);
 
-        // Count existing vs new
         const selected = appState.parsedGAs.filter(g => g.selected);
-        let existingCount = 0;
-        let newCount = 0;
-
+        let existingCount = 0, newCount = 0;
         selected.forEach(ga => {
-            if (appState.existingAddresses.has(ga.address)) {
-                existingCount++;
-            } else {
-                newCount++;
-            }
+            if (appState.existingAddresses.has(ga.address)) existingCount++;
+            else newCount++;
         });
 
         document.getElementById('existing-count').textContent = existingCount;
         document.getElementById('new-count').textContent = newCount;
         results.classList.remove('hidden');
-
     } catch (err) {
-        if (err.mark) {
-            errorText.textContent = `Zeile ${err.mark.line + 1}: ${err.reason || err.message}`;
-        } else {
-            errorText.textContent = err.message;
-        }
+        errorText.textContent = err.mark ? `Zeile ${err.mark.line + 1}: ${err.reason || err.message}` : err.message;
         errorEl.classList.remove('hidden');
     }
 }
 
 function extractExistingAddresses(yaml) {
     const addresses = new Set();
+    const addrFields = ['address', 'state_address', 'brightness_address', 'brightness_state_address',
+        'move_long_address', 'stop_address', 'position_address', 'position_state_address',
+        'temperature_address', 'target_temperature_address', 'target_temperature_state_address',
+        'setpoint_address', 'setpoint_state_address'];
 
-    function searchObj(obj) {
+    function search(obj) {
         if (!obj || typeof obj !== 'object') return;
-
-        if (Array.isArray(obj)) {
-            obj.forEach(item => searchObj(item));
-            return;
+        if (Array.isArray(obj)) { obj.forEach(search); return; }
+        for (const f of addrFields) {
+            if (obj[f] && typeof obj[f] === 'string') addresses.add(obj[f]);
         }
-
-        // Check for known address fields
-        const addrFields = ['address', 'state_address', 'brightness_address', 'brightness_state_address',
-            'move_long_address', 'stop_address', 'position_address', 'position_state_address',
-            'temperature_address', 'target_temperature_address', 'target_temperature_state_address',
-            'setpoint_address', 'setpoint_state_address'];
-
-        for (const field of addrFields) {
-            if (obj[field] && typeof obj[field] === 'string') {
-                addresses.add(obj[field]);
-            }
-        }
-
-        for (const value of Object.values(obj)) {
-            searchObj(value);
-        }
+        for (const v of Object.values(obj)) search(v);
     }
-
-    searchObj(yaml);
+    search(yaml);
     return addresses;
 }
 
@@ -964,123 +855,71 @@ function extractExistingAddresses(yaml) {
 // ============================================================
 function generateYaml() {
     const selected = appState.parsedGAs.filter(g => g.selected && g.haType !== 'unknown');
-
-    // Filter out existing addresses if YAML was loaded
     const toGenerate = appState.existingAddresses.size > 0
         ? selected.filter(g => !appState.existingAddresses.has(g.address))
         : selected;
 
-    // Group by HA type
     const groups = {};
     for (const ga of toGenerate) {
         if (!groups[ga.haType]) groups[ga.haType] = [];
         groups[ga.haType].push(ga);
     }
 
-    // Build YAML structure
     const now = new Date().toISOString().split('T')[0];
-    let yamlStr = `# Generiert von KNX2HA – https://code.ribee.de\n`;
-    yamlStr += `# Datum: ${now}\n\n`;
-    yamlStr += `knx:\n`;
+    let y = `# Generiert von KNX2HA – https://code.ribee.de\n# Datum: ${now}\n\nknx:\n`;
 
-    // Lights
     if (groups.light) {
-        yamlStr += `  light:\n`;
+        y += `  light:\n`;
         for (const ga of groups.light) {
-            yamlStr += `    - name: "${ga.name}"\n`;
-            yamlStr += `      address: "${ga.address}"\n`;
-            if (isDimmDpt(ga.dpt)) {
-                yamlStr += `      brightness_address: "${ga.address}"\n`;
-            }
-            yamlStr += `\n`;
+            y += `    - name: "${ga.name}"\n      address: "${ga.address}"\n`;
+            if (ga.dpt === '3.007' || ga.dpt === '5.001') y += `      brightness_address: "${ga.address}"\n`;
+            y += `\n`;
         }
     }
-
-    // Switches
     if (groups.switch) {
-        yamlStr += `  switch:\n`;
-        for (const ga of groups.switch) {
-            yamlStr += `    - name: "${ga.name}"\n`;
-            yamlStr += `      address: "${ga.address}"\n`;
-            yamlStr += `\n`;
-        }
+        y += `  switch:\n`;
+        for (const ga of groups.switch) y += `    - name: "${ga.name}"\n      address: "${ga.address}"\n\n`;
     }
-
-    // Covers
     if (groups.cover) {
-        yamlStr += `  cover:\n`;
-        for (const ga of groups.cover) {
-            yamlStr += `    - name: "${ga.name}"\n`;
-            yamlStr += `      move_long_address: "${ga.address}"\n`;
-            yamlStr += `\n`;
-        }
+        y += `  cover:\n`;
+        for (const ga of groups.cover) y += `    - name: "${ga.name}"\n      move_long_address: "${ga.address}"\n\n`;
     }
-
-    // Climate
     if (groups.climate) {
-        yamlStr += `  climate:\n`;
+        y += `  climate:\n`;
         for (const ga of groups.climate) {
-            yamlStr += `    - name: "${ga.name}"\n`;
-            if (isTemperatureDpt(ga.dpt)) {
-                yamlStr += `      temperature_address: "${ga.address}"\n`;
-            } else {
-                yamlStr += `      target_temperature_address: "${ga.address}"\n`;
-            }
-            yamlStr += `\n`;
+            y += `    - name: "${ga.name}"\n`;
+            y += (ga.dpt === '9.001' || ga.dpt === '9.002' || ga.dpt === '9.003')
+                ? `      temperature_address: "${ga.address}"\n\n`
+                : `      target_temperature_address: "${ga.address}"\n\n`;
         }
     }
-
-    // Binary Sensors
     if (groups.binary_sensor) {
-        yamlStr += `  binary_sensor:\n`;
-        for (const ga of groups.binary_sensor) {
-            yamlStr += `    - name: "${ga.name}"\n`;
-            yamlStr += `      state_address: "${ga.address}"\n`;
-            yamlStr += `\n`;
-        }
+        y += `  binary_sensor:\n`;
+        for (const ga of groups.binary_sensor) y += `    - name: "${ga.name}"\n      state_address: "${ga.address}"\n\n`;
     }
-
-    // Sensors
     if (groups.sensor) {
-        yamlStr += `  sensor:\n`;
+        y += `  sensor:\n`;
         for (const ga of groups.sensor) {
-            yamlStr += `    - name: "${ga.name}"\n`;
-            yamlStr += `      state_address: "${ga.address}"\n`;
-            const sensorType = SENSOR_TYPE_MAP[ga.dpt];
-            if (sensorType) {
-                yamlStr += `      type: ${sensorType}\n`;
-            }
-            yamlStr += `\n`;
+            y += `    - name: "${ga.name}"\n      state_address: "${ga.address}"\n`;
+            const st = SENSOR_TYPE_MAP[ga.dpt];
+            if (st) y += `      type: ${st}\n`;
+            y += `\n`;
         }
     }
-
-    // If nothing to generate
     if (Object.keys(groups).length === 0) {
-        yamlStr += `  # Keine Gruppenadressen zum Generieren ausgewählt.\n`;
-        yamlStr += `  # Bitte wähle in Schritt 1 die gewünschten Adressen aus.\n`;
+        y += `  # Keine Gruppenadressen zum Generieren ausgewählt.\n`;
     }
 
-    document.getElementById('yaml-output').querySelector('code').textContent = yamlStr;
-}
-
-function isDimmDpt(dpt) {
-    return dpt === '3.007' || dpt === '5.001';
-}
-
-function isTemperatureDpt(dpt) {
-    return dpt === '9.001' || dpt === '9.002' || dpt === '9.003';
+    document.getElementById('yaml-output').querySelector('code').textContent = y;
 }
 
 // ============================================================
-// YAML ACTIONS (Copy / Download)
+// YAML ACTIONS
 // ============================================================
 function initYamlActions() {
     document.getElementById('copy-yaml').addEventListener('click', () => {
         const yaml = document.getElementById('yaml-output').querySelector('code').textContent;
-        navigator.clipboard.writeText(yaml).then(() => {
-            showToast();
-        }).catch(() => {
-            // Fallback
+        navigator.clipboard.writeText(yaml).then(showToast).catch(() => {
             const ta = document.createElement('textarea');
             ta.value = yaml;
             document.body.appendChild(ta);

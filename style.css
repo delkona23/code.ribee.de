@@ -819,6 +819,119 @@ code {
     background: var(--text-muted);
 }
 
+/* ---------- Current User ---------- */
+.current-user {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 0.3rem 0.65rem;
+    background: var(--bg-input);
+    border-radius: 20px;
+    border: 1px solid var(--border);
+}
+
+/* ---------- Modal ---------- */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.modal-content {
+    position: relative;
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 0;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 { font-size: 1.15rem; }
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-body h3 {
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+}
+
+.modal-body .input-group { margin-bottom: 0.75rem; }
+.modal-body .btn-primary { margin-top: 0.5rem; }
+
+.success-msg {
+    color: var(--success);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(63, 185, 80, 0.1);
+    border-radius: var(--radius);
+    border: 1px solid rgba(63, 185, 80, 0.2);
+}
+
+/* ---------- User List ---------- */
+.user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.user-item .user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-item .role-badge {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.user-item .btn-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.2rem;
+    font-size: 1.1rem;
+    transition: color var(--transition);
+}
+
+.user-item .btn-delete:hover { color: var(--error); }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 640px) {
     .step-label { display: none; }

@@ -28,10 +28,14 @@
                 <p class="subtitle">KNX to Home Assistant Converter</p>
             </div>
 
-            <!-- Setup Mode (First Run) -->
+            <!-- Setup Mode (First Run – Admin) -->
             <form id="setup-form" class="auth-form hidden">
-                <h2>Passwort einrichten</h2>
-                <p class="form-hint">Erstmalige Einrichtung. Wähle ein sicheres Passwort.</p>
+                <h2>Admin-Konto einrichten</h2>
+                <p class="form-hint">Erstmalige Einrichtung. Der erste Benutzer wird Admin.</p>
+                <div class="input-group">
+                    <label for="setup-username">Benutzername</label>
+                    <input type="text" id="setup-username" placeholder="z.B. admin" autocomplete="username">
+                </div>
                 <div class="input-group">
                     <label for="setup-password">Passwort</label>
                     <input type="password" id="setup-password" placeholder="Mindestens 12 Zeichen" autocomplete="new-password">
@@ -60,12 +64,16 @@
                     <span id="req-special" class="req">Sonderzeichen</span>
                 </div>
                 <div id="setup-error" class="error-msg hidden"></div>
-                <button type="submit" class="btn btn-primary" id="setup-btn">Passwort speichern</button>
+                <button type="submit" class="btn btn-primary" id="setup-btn">Admin-Konto erstellen</button>
             </form>
 
             <!-- Login Mode -->
             <form id="login-form" class="auth-form hidden">
                 <h2>Anmelden</h2>
+                <div class="input-group">
+                    <label for="login-username">Benutzername</label>
+                    <input type="text" id="login-username" placeholder="Benutzername" autocomplete="username">
+                </div>
                 <div class="input-group">
                     <label for="login-password">Passwort</label>
                     <input type="password" id="login-password" placeholder="Passwort eingeben" autocomplete="current-password">
@@ -81,7 +89,6 @@
                     Zu viele Fehlversuche. Bitte warten: <span id="lockout-timer">30</span>s
                 </div>
                 <button type="submit" class="btn btn-primary" id="login-btn">Anmelden</button>
-                <button type="button" class="btn btn-link" id="reset-pw-btn">Passwort zurücksetzen</button>
             </form>
         </div>
     </div>
@@ -103,6 +110,16 @@
                 </div>
             </div>
             <div class="header-right">
+                <span id="current-user" class="current-user"></span>
+                <button id="admin-btn" class="btn btn-ghost hidden" title="Benutzerverwaltung">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                    Benutzer
+                </button>
                 <button id="logout-btn" class="btn btn-ghost" title="Abmelden">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -367,6 +384,36 @@
                 </div>
             </section>
         </main>
+
+        <!-- Admin Modal -->
+        <div id="admin-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Benutzerverwaltung</h2>
+                    <button class="btn btn-ghost btn-sm" id="admin-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <h3>Neuen Benutzer anlegen</h3>
+                    <form id="add-user-form">
+                        <div class="input-group">
+                            <label for="new-username">Benutzername</label>
+                            <input type="text" id="new-username" placeholder="Benutzername" autocomplete="off">
+                        </div>
+                        <div class="input-group">
+                            <label for="new-password">Passwort</label>
+                            <input type="password" id="new-password" placeholder="Mindestens 12 Zeichen" autocomplete="new-password">
+                        </div>
+                        <div id="add-user-error" class="error-msg hidden"></div>
+                        <div id="add-user-success" class="success-msg hidden"></div>
+                        <button type="submit" class="btn btn-primary">Benutzer anlegen</button>
+                    </form>
+
+                    <h3 style="margin-top:1.5rem">Vorhandene Benutzer</h3>
+                    <div id="user-list"></div>
+                </div>
+            </div>
+        </div>
 
         <!-- Footer -->
         <footer class="app-footer">
