@@ -3,110 +3,387 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>code.ribee.de - Coming Soon</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1e2e 100%);
-            color: #e6edf3;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
-        }
-        .container {
-            text-align: center;
-            padding: 2rem;
-            position: relative;
-            z-index: 1;
-        }
-        .logo {
-            font-size: 1rem;
-            letter-spacing: 0.3em;
-            text-transform: uppercase;
-            color: #58a6ff;
-            margin-bottom: 2rem;
-        }
-        h1 {
-            font-size: clamp(2.5rem, 6vw, 4.5rem);
-            font-weight: 700;
-            margin-bottom: 1rem;
-            background: linear-gradient(90deg, #58a6ff, #bc8cff, #58a6ff);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: shimmer 3s linear infinite;
-        }
-        @keyframes shimmer {
-            to { background-position: 200% center; }
-        }
-        p {
-            font-size: 1.2rem;
-            color: #8b949e;
-            max-width: 500px;
-            margin: 0 auto 2.5rem;
-            line-height: 1.6;
-        }
-        .line {
-            width: 60px;
-            height: 3px;
-            background: #58a6ff;
-            margin: 0 auto 2.5rem;
-            border-radius: 2px;
-        }
-        .pulse {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background: #3fb950;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse 2s ease-in-out infinite;
-            vertical-align: middle;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.4); }
-            50% { opacity: 0.7; box-shadow: 0 0 0 10px rgba(63, 185, 80, 0); }
-        }
-        .status {
-            font-size: 0.9rem;
-            color: #8b949e;
-        }
-        .bg-glow {
-            position: fixed;
-            width: 400px;
-            height: 400px;
-            border-radius: 50%;
-            filter: blur(120px);
-            opacity: 0.15;
-            pointer-events: none;
-        }
-        .glow-1 {
-            top: -100px;
-            right: -100px;
-            background: #58a6ff;
-        }
-        .glow-2 {
-            bottom: -100px;
-            left: -100px;
-            background: #bc8cff;
-        }
-    </style>
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                   font-src https://fonts.gstatic.com;
+                   img-src 'self' data:;
+                   connect-src 'self';">
+    <title>KNX2HA – KNX to Home Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="bg-glow glow-1"></div>
-    <div class="bg-glow glow-2"></div>
-    <div class="container">
-        <div class="logo">code.ribee.de</div>
-        <h1>Coming Soon</h1>
-        <div class="line"></div>
-        <p>Hier entsteht etwas Neues. Wir arbeiten gerade an dieser Seite.</p>
-        <div class="status">
-            <span class="pulse"></span>
-            In Entwicklung
+    <!-- ========== LOGIN / SETUP SCREEN ========== -->
+    <div id="auth-screen" class="screen active">
+        <div class="auth-container">
+            <div class="auth-logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="#ff6b35" stroke-width="2.5">
+                        <rect x="4" y="8" width="40" height="32" rx="4"/>
+                        <line x1="16" y1="8" x2="16" y2="40"/>
+                        <line x1="32" y1="8" x2="32" y2="40"/>
+                        <line x1="4" y1="20" x2="44" y2="20"/>
+                        <line x1="4" y1="30" x2="44" y2="30"/>
+                    </svg>
+                </div>
+                <h1>KNX<span class="accent">2</span>HA</h1>
+                <p class="subtitle">KNX to Home Assistant Converter</p>
+            </div>
+
+            <!-- Setup Mode (First Run) -->
+            <form id="setup-form" class="auth-form hidden">
+                <h2>Passwort einrichten</h2>
+                <p class="form-hint">Erstmalige Einrichtung. Wähle ein sicheres Passwort.</p>
+                <div class="input-group">
+                    <label for="setup-password">Passwort</label>
+                    <input type="password" id="setup-password" placeholder="Mindestens 12 Zeichen" autocomplete="new-password">
+                    <button type="button" class="toggle-pw" data-target="setup-password" aria-label="Passwort anzeigen">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="input-group">
+                    <label for="setup-confirm">Passwort bestätigen</label>
+                    <input type="password" id="setup-confirm" placeholder="Passwort wiederholen" autocomplete="new-password">
+                    <button type="button" class="toggle-pw" data-target="setup-confirm" aria-label="Passwort anzeigen">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="pw-requirements">
+                    <span id="req-length" class="req">12+ Zeichen</span>
+                    <span id="req-upper" class="req">Großbuchstabe</span>
+                    <span id="req-lower" class="req">Kleinbuchstabe</span>
+                    <span id="req-number" class="req">Zahl</span>
+                    <span id="req-special" class="req">Sonderzeichen</span>
+                </div>
+                <div id="setup-error" class="error-msg hidden"></div>
+                <button type="submit" class="btn btn-primary" id="setup-btn">Passwort speichern</button>
+            </form>
+
+            <!-- Login Mode -->
+            <form id="login-form" class="auth-form hidden">
+                <h2>Anmelden</h2>
+                <div class="input-group">
+                    <label for="login-password">Passwort</label>
+                    <input type="password" id="login-password" placeholder="Passwort eingeben" autocomplete="current-password">
+                    <button type="button" class="toggle-pw" data-target="login-password" aria-label="Passwort anzeigen">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="login-error" class="error-msg hidden"></div>
+                <div id="lockout-msg" class="lockout-msg hidden">
+                    Zu viele Fehlversuche. Bitte warten: <span id="lockout-timer">30</span>s
+                </div>
+                <button type="submit" class="btn btn-primary" id="login-btn">Anmelden</button>
+                <button type="button" class="btn btn-link" id="reset-pw-btn">Passwort zurücksetzen</button>
+            </form>
         </div>
     </div>
+
+    <!-- ========== MAIN APPLICATION ========== -->
+    <div id="app-screen" class="screen hidden">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="header-logo">
+                    <svg viewBox="0 0 48 48" width="28" height="28" fill="none" stroke="#ff6b35" stroke-width="2.5">
+                        <rect x="4" y="8" width="40" height="32" rx="4"/>
+                        <line x1="16" y1="8" x2="16" y2="40"/>
+                        <line x1="32" y1="8" x2="32" y2="40"/>
+                        <line x1="4" y1="20" x2="44" y2="20"/>
+                        <line x1="4" y1="30" x2="44" y2="30"/>
+                    </svg>
+                    <span class="header-title">KNX<span class="accent">2</span>HA</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button id="logout-btn" class="btn btn-ghost" title="Abmelden">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Abmelden
+                </button>
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <nav class="step-indicator">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">KNX Projekt laden</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">YAML prüfen</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Generieren</div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Step 1: KNX Project Upload -->
+            <section id="step-1" class="step-content active">
+                <div class="step-header">
+                    <h2>KNX Projekt laden</h2>
+                    <p>Lade deine <code>.knxproj</code>-Datei (ETS5/ETS6). Die Datei wird ausschließlich lokal im Browser verarbeitet.</p>
+                </div>
+
+                <div id="drop-zone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <svg viewBox="0 0 64 64" width="48" height="48" fill="none" stroke="#ff6b35" stroke-width="2">
+                            <path d="M44 24L32 12 20 24"/>
+                            <line x1="32" y1="12" x2="32" y2="44"/>
+                            <path d="M8 40v12a4 4 0 004 4h40a4 4 0 004-4V40"/>
+                        </svg>
+                        <p class="drop-text">Datei hierher ziehen</p>
+                        <p class="drop-or">oder</p>
+                        <label class="btn btn-secondary" for="file-input">Datei auswählen</label>
+                        <input type="file" id="file-input" accept=".knxproj" class="sr-only">
+                        <p class="drop-hint">Unterstützt: .knxproj (ETS5 / ETS6)</p>
+                    </div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="parse-loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <p>Projekt wird analysiert...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="parse-progress"></div>
+                    </div>
+                </div>
+
+                <!-- Parse Results Table -->
+                <div id="parse-results" class="hidden">
+                    <div class="results-header">
+                        <h3>Erkannte Gruppenadressen</h3>
+                        <div class="results-stats">
+                            <span id="ga-count" class="stat-badge">0 Adressen</span>
+                            <span id="device-count" class="stat-badge">0 Geräte</span>
+                        </div>
+                    </div>
+
+                    <!-- Filter Bar -->
+                    <div class="filter-bar">
+                        <input type="text" id="ga-search" placeholder="Suchen..." class="filter-input">
+                        <select id="ga-type-filter" class="filter-select">
+                            <option value="">Alle Typen</option>
+                            <option value="light">Licht</option>
+                            <option value="switch">Schalter</option>
+                            <option value="cover">Rolladen</option>
+                            <option value="climate">Heizung</option>
+                            <option value="sensor">Sensor</option>
+                            <option value="binary_sensor">Binärsensor</option>
+                            <option value="unknown">Unbekannt</option>
+                        </select>
+                        <select id="ga-manufacturer-filter" class="filter-select">
+                            <option value="">Alle Hersteller</option>
+                            <option value="Jung">Jung</option>
+                            <option value="ABB">ABB</option>
+                            <option value="MDT">MDT</option>
+                            <option value="Theben">Theben</option>
+                            <option value="unknown">Unbekannt</option>
+                        </select>
+                    </div>
+
+                    <!-- Results Table -->
+                    <div class="table-container">
+                        <table id="ga-table">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="select-all" title="Alle auswählen"></th>
+                                    <th>Adresse</th>
+                                    <th>Name</th>
+                                    <th>DPT</th>
+                                    <th>Hersteller</th>
+                                    <th>HA-Typ</th>
+                                    <th>Aktion</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ga-table-body">
+                                <!-- Dynamically filled -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="step-actions">
+                        <button class="btn btn-primary" id="to-step-2">
+                            Weiter zu Schritt 2
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                                <polyline points="12 5 19 12 12 19"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 2: Existing YAML Check -->
+            <section id="step-2" class="step-content hidden">
+                <div class="step-header">
+                    <h2>Bestehende YAML prüfen <span class="optional-badge">Optional</span></h2>
+                    <p>Lade eine bestehende <code>configuration.yaml</code> oder <code>knx.yaml</code>, um Duplikate zu vermeiden.</p>
+                </div>
+
+                <div id="yaml-drop-zone" class="drop-zone drop-zone-small">
+                    <div class="drop-zone-content">
+                        <svg viewBox="0 0 64 64" width="36" height="36" fill="none" stroke="#ff6b35" stroke-width="2">
+                            <path d="M40 8H16a4 4 0 00-4 4v40a4 4 0 004 4h32a4 4 0 004-4V20L40 8z"/>
+                            <path d="M40 8v12h12"/>
+                            <line x1="20" y1="28" x2="44" y2="28"/>
+                            <line x1="20" y1="36" x2="44" y2="36"/>
+                            <line x1="20" y1="44" x2="32" y2="44"/>
+                        </svg>
+                        <p class="drop-text">YAML-Datei hierher ziehen</p>
+                        <label class="btn btn-secondary btn-sm" for="yaml-file-input">Datei auswählen</label>
+                        <input type="file" id="yaml-file-input" accept=".yaml,.yml" class="sr-only">
+                    </div>
+                </div>
+
+                <!-- YAML Parse Error -->
+                <div id="yaml-error" class="error-box hidden">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                    <div>
+                        <strong>YAML-Fehler</strong>
+                        <p id="yaml-error-text"></p>
+                    </div>
+                </div>
+
+                <!-- YAML Comparison Results -->
+                <div id="yaml-results" class="hidden">
+                    <div class="comparison-cards">
+                        <div class="comparison-card">
+                            <div class="comparison-icon skip">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 6L6 18M6 6l12 12"/>
+                                </svg>
+                            </div>
+                            <div class="comparison-value" id="existing-count">0</div>
+                            <div class="comparison-label">Bereits vorhanden (werden übersprungen)</div>
+                        </div>
+                        <div class="comparison-card">
+                            <div class="comparison-icon add">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                            </div>
+                            <div class="comparison-value" id="new-count">0</div>
+                            <div class="comparison-label">Neu (werden ergänzt)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button class="btn btn-ghost" id="back-to-step-1">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="19" y1="12" x2="5" y2="12"/>
+                            <polyline points="12 19 5 12 12 5"/>
+                        </svg>
+                        Zurück
+                    </button>
+                    <button class="btn btn-secondary" id="skip-step-2">Überspringen</button>
+                    <button class="btn btn-primary" id="to-step-3">
+                        Weiter zu Schritt 3
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 3: Generate & Download YAML -->
+            <section id="step-3" class="step-content hidden">
+                <div class="step-header">
+                    <h2>YAML generieren & herunterladen</h2>
+                    <p>Überprüfe die generierte Konfiguration und lade sie herunter.</p>
+                </div>
+
+                <!-- YAML Preview -->
+                <div class="yaml-preview-container">
+                    <div class="yaml-preview-header">
+                        <h3>Generierte Konfiguration</h3>
+                        <div class="yaml-preview-actions">
+                            <button class="btn btn-ghost btn-sm" id="copy-yaml" title="In Zwischenablage kopieren">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                                </svg>
+                                Kopieren
+                            </button>
+                            <button class="btn btn-primary btn-sm" id="download-yaml">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                                Herunterladen
+                            </button>
+                        </div>
+                    </div>
+                    <pre id="yaml-output" class="yaml-code"><code><!-- YAML output here --></code></pre>
+                </div>
+
+                <!-- Copy Success Toast -->
+                <div id="copy-toast" class="toast hidden">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    In Zwischenablage kopiert!
+                </div>
+
+                <div class="step-actions">
+                    <button class="btn btn-ghost" id="back-to-step-2">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="19" y1="12" x2="5" y2="12"/>
+                            <polyline points="12 19 5 12 12 5"/>
+                        </svg>
+                        Zurück
+                    </button>
+                    <button class="btn btn-secondary" id="new-project">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"/>
+                            <path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+                        </svg>
+                        Neues Projekt
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>KNX2HA &ndash; Alle Daten werden ausschließlich lokal im Browser verarbeitet.</p>
+        </footer>
+    </div>
+
+    <!-- CDN Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js" defer></script>
+    <script src="app.js" defer></script>
 </body>
 </html>
