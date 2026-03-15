@@ -54,25 +54,15 @@ let appState = {
 };
 
 // ============================================================
-// STORAGE HELPERS – Multi-User
+// BENUTZER – fest im Code (Hashes, NICHT Klartext)
 // ============================================================
-// User storage format: knx2ha_users = [{username, hash, role}]
-function getUsers() {
-    try {
-        return JSON.parse(localStorage.getItem('knx2ha_users') || '[]');
-    } catch { return []; }
-}
-
-function saveUsers(users) {
-    localStorage.setItem('knx2ha_users', JSON.stringify(users));
-}
-
-function hasAnyUser() {
-    return getUsers().length > 0;
-}
+const USERS = [
+    { username: "admin", hash: "$2b$10$3iOrc980Hjvcjx.xsyPIEO7IIrfiTS2Kkh34VVFzLXA75VBBFhJh2", role: "admin" },
+    { username: "007ritter", hash: "$2b$10$aVZReNiNhVgi.TsV6T9flezHXpXD5L0W1uodIYvwgh0hlx/rHydeC", role: "user" },
+];
 
 function findUser(username) {
-    return getUsers().find(u => u.username.toLowerCase() === username.toLowerCase());
+    return USERS.find(u => u.username.toLowerCase() === username.toLowerCase());
 }
 
 // ============================================================
@@ -86,9 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Migrate old single-user hash to multi-user format
-    migrateOldAuth();
-
     initAuth();
     initTogglePw();
     initDropZones();
@@ -97,106 +84,26 @@ document.addEventListener('DOMContentLoaded', () => {
     initAdmin();
 });
 
-function migrateOldAuth() {
-    const oldHash = localStorage.getItem('knx2ha_pw_hash');
-    if (oldHash && !hasAnyUser()) {
-        saveUsers([{ username: 'admin', hash: oldHash, role: 'admin' }]);
-        localStorage.removeItem('knx2ha_pw_hash');
-    }
-}
-
 // ============================================================
 // AUTH MODULE
 // ============================================================
 function initAuth() {
-    const setupForm = document.getElementById('setup-form');
     const loginForm = document.getElementById('login-form');
+    loginForm.classList.remove('hidden');
 
-    if (hasAnyUser()) {
-        loginForm.classList.remove('hidden');
-    } else {
-        setupForm.classList.remove('hidden');
-    }
-
-    setupForm.addEventListener('submit', handleSetup);
     loginForm.addEventListener('submit', handleLogin);
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
-    initPasswordRequirements();
 
     // Restore session
     const session = sessionStorage.getItem('knx2ha_session');
     if (session) {
         try {
             const s = JSON.parse(session);
-            if (s && s.username) {
+            if (s && s.username && findUser(s.username)) {
                 appState.currentUser = s;
                 showApp();
             }
         } catch {}
-    }
-}
-
-function initPasswordRequirements() {
-    const setupPw = document.getElementById('setup-password');
-    setupPw.addEventListener('input', () => {
-        const v = setupPw.value;
-        document.getElementById('req-length').classList.toggle('met', v.length >= 12);
-        document.getElementById('req-upper').classList.toggle('met', /[A-Z]/.test(v));
-        document.getElementById('req-lower').classList.toggle('met', /[a-z]/.test(v));
-        document.getElementById('req-number').classList.toggle('met', /[0-9]/.test(v));
-        document.getElementById('req-special').classList.toggle('met', /[^A-Za-z0-9]/.test(v));
-    });
-}
-
-function validatePassword(pw) {
-    if (pw.length < 12) return 'Mindestens 12 Zeichen erforderlich.';
-    if (!/[A-Z]/.test(pw)) return 'Mindestens ein Großbuchstabe erforderlich.';
-    if (!/[a-z]/.test(pw)) return 'Mindestens ein Kleinbuchstabe erforderlich.';
-    if (!/[0-9]/.test(pw)) return 'Mindestens eine Zahl erforderlich.';
-    if (!/[^A-Za-z0-9]/.test(pw)) return 'Mindestens ein Sonderzeichen erforderlich.';
-    return null;
-}
-
-function handleSetup(e) {
-    e.preventDefault();
-    const username = document.getElementById('setup-username').value.trim();
-    const pw = document.getElementById('setup-password').value;
-    const confirmPw = document.getElementById('setup-confirm').value;
-    const errorEl = document.getElementById('setup-error');
-
-    if (!username || username.length < 2) {
-        showError(errorEl, 'Benutzername muss mindestens 2 Zeichen lang sein.');
-        return;
-    }
-
-    const validationError = validatePassword(pw);
-    if (validationError) { showError(errorEl, validationError); return; }
-
-    if (pw !== confirmPw) {
-        showError(errorEl, 'Passwörter stimmen nicht überein.');
-        return;
-    }
-
-    const btn = document.getElementById('setup-btn');
-    btn.disabled = true;
-    btn.textContent = 'Wird gespeichert...';
-
-    try {
-        const bcrypt = dcodeIO.bcrypt;
-        const hash = bcrypt.hashSync(pw, bcrypt.genSaltSync(10));
-        saveUsers([{ username, hash, role: 'admin' }]);
-
-        // Verify it was saved
-        if (!hasAnyUser()) {
-            throw new Error('Speichern fehlgeschlagen – localStorage blockiert?');
-        }
-
-        createSession(username, 'admin');
-        showApp();
-    } catch (err) {
-        showError(errorEl, 'Fehler: ' + err.message);
-        btn.disabled = false;
-        btn.textContent = 'Admin-Konto erstellen';
     }
 }
 
@@ -321,7 +228,6 @@ function initAdmin() {
     document.getElementById('admin-btn').addEventListener('click', openAdmin);
     document.getElementById('admin-close').addEventListener('click', closeAdmin);
     document.querySelector('.modal-backdrop')?.addEventListener('click', closeAdmin);
-    document.getElementById('add-user-form').addEventListener('submit', handleAddUser);
 }
 
 function openAdmin() {
@@ -335,10 +241,9 @@ function closeAdmin() {
 
 function renderUserList() {
     const list = document.getElementById('user-list');
-    const users = getUsers();
     list.innerHTML = '';
 
-    users.forEach(u => {
+    USERS.forEach(u => {
         const div = document.createElement('div');
         div.className = 'user-item';
         const isCurrentUser = appState.currentUser && appState.currentUser.username === u.username;
@@ -348,62 +253,9 @@ function renderUserList() {
                 <span class="role-badge">${u.role}</span>
                 ${isCurrentUser ? '<span style="color:var(--success);font-size:0.75rem">(Du)</span>' : ''}
             </div>
-            ${!isCurrentUser ? `<button class="btn-delete" data-user="${escHtml(u.username)}" title="Benutzer löschen">&times;</button>` : ''}
         `;
         list.appendChild(div);
     });
-
-    // Delete handler
-    list.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const username = btn.dataset.user;
-            if (confirm(`Benutzer "${username}" wirklich löschen?`)) {
-                const users = getUsers().filter(u => u.username !== username);
-                saveUsers(users);
-                renderUserList();
-            }
-        });
-    });
-}
-
-function handleAddUser(e) {
-    e.preventDefault();
-    const username = document.getElementById('new-username').value.trim();
-    const pw = document.getElementById('new-password').value;
-    const errorEl = document.getElementById('add-user-error');
-    const successEl = document.getElementById('add-user-success');
-
-    errorEl.classList.add('hidden');
-    successEl.classList.add('hidden');
-
-    if (!username || username.length < 2) {
-        showError(errorEl, 'Benutzername muss mindestens 2 Zeichen lang sein.');
-        return;
-    }
-
-    if (findUser(username)) {
-        showError(errorEl, 'Benutzername existiert bereits.');
-        return;
-    }
-
-    const validationError = validatePassword(pw);
-    if (validationError) { showError(errorEl, validationError); return; }
-
-    try {
-        const bcrypt = dcodeIO.bcrypt;
-        const hash = bcrypt.hashSync(pw, bcrypt.genSaltSync(10));
-        const users = getUsers();
-        users.push({ username, hash, role: 'user' });
-        saveUsers(users);
-
-        successEl.textContent = `Benutzer "${username}" wurde angelegt.`;
-        successEl.classList.remove('hidden');
-        document.getElementById('new-username').value = '';
-        document.getElementById('new-password').value = '';
-        renderUserList();
-    } catch (err) {
-        showError(errorEl, 'Fehler: ' + err.message);
-    }
 }
 
 // ============================================================

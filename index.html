@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
     <!-- ========== LOGIN / SETUP SCREEN ========== -->
@@ -28,46 +28,7 @@
                 <p class="subtitle">KNX to Home Assistant Converter</p>
             </div>
 
-            <!-- Setup Mode (First Run – Admin) -->
-            <form id="setup-form" class="auth-form hidden">
-                <h2>Admin-Konto einrichten</h2>
-                <p class="form-hint">Erstmalige Einrichtung. Der erste Benutzer wird Admin.</p>
-                <div class="input-group">
-                    <label for="setup-username">Benutzername</label>
-                    <input type="text" id="setup-username" placeholder="z.B. admin" autocomplete="username">
-                </div>
-                <div class="input-group">
-                    <label for="setup-password">Passwort</label>
-                    <input type="password" id="setup-password" placeholder="Mindestens 12 Zeichen" autocomplete="new-password">
-                    <button type="button" class="toggle-pw" data-target="setup-password" aria-label="Passwort anzeigen">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="input-group">
-                    <label for="setup-confirm">Passwort bestätigen</label>
-                    <input type="password" id="setup-confirm" placeholder="Passwort wiederholen" autocomplete="new-password">
-                    <button type="button" class="toggle-pw" data-target="setup-confirm" aria-label="Passwort anzeigen">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="pw-requirements">
-                    <span id="req-length" class="req">12+ Zeichen</span>
-                    <span id="req-upper" class="req">Großbuchstabe</span>
-                    <span id="req-lower" class="req">Kleinbuchstabe</span>
-                    <span id="req-number" class="req">Zahl</span>
-                    <span id="req-special" class="req">Sonderzeichen</span>
-                </div>
-                <div id="setup-error" class="error-msg hidden"></div>
-                <button type="submit" class="btn btn-primary" id="setup-btn">Admin-Konto erstellen</button>
-            </form>
-
-            <!-- Login Mode -->
+            <!-- Login -->
             <form id="login-form" class="auth-form hidden">
                 <h2>Anmelden</h2>
                 <div class="input-group">
@@ -394,23 +355,11 @@
                     <button class="btn btn-ghost btn-sm" id="admin-close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <h3>Neuen Benutzer anlegen</h3>
-                    <form id="add-user-form">
-                        <div class="input-group">
-                            <label for="new-username">Benutzername</label>
-                            <input type="text" id="new-username" placeholder="Benutzername" autocomplete="off">
-                        </div>
-                        <div class="input-group">
-                            <label for="new-password">Passwort</label>
-                            <input type="password" id="new-password" placeholder="Mindestens 12 Zeichen" autocomplete="new-password">
-                        </div>
-                        <div id="add-user-error" class="error-msg hidden"></div>
-                        <div id="add-user-success" class="success-msg hidden"></div>
-                        <button type="submit" class="btn btn-primary">Benutzer anlegen</button>
-                    </form>
-
-                    <h3 style="margin-top:1.5rem">Vorhandene Benutzer</h3>
+                    <h3>Registrierte Benutzer</h3>
                     <div id="user-list"></div>
+                    <p style="margin-top:1rem;font-size:0.8rem;color:var(--text-muted)">
+                        Benutzer werden sicher im Quellcode verwaltet. Kontaktiere den Administrator, um neue Benutzer hinzuzufügen.
+                    </p>
                 </div>
             </div>
         </div>
@@ -425,6 +374,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
-    <script src="app.js?v=4" defer></script>
+    <script src="app.js?v=5" defer></script>
 </body>
 </html>
