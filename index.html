@@ -3,36 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>code.ribee.de</title>
+    <title>code.ribee.de - Coming Soon</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0d1117;
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1e2e 100%);
             color: #e6edf3;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            overflow: hidden;
         }
         .container {
             text-align: center;
             padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        .logo {
+            font-size: 1rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: #58a6ff;
+            margin-bottom: 2rem;
         }
         h1 {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, #58a6ff, #bc8cff, #58a6ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s linear infinite;
+        }
+        @keyframes shimmer {
+            to { background-position: 200% center; }
         }
         p {
             font-size: 1.2rem;
             color: #8b949e;
+            max-width: 500px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.6;
+        }
+        .line {
+            width: 60px;
+            height: 3px;
+            background: #58a6ff;
+            margin: 0 auto 2.5rem;
+            border-radius: 2px;
+        }
+        .pulse {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #3fb950;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s ease-in-out infinite;
+            vertical-align: middle;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.4); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 10px rgba(63, 185, 80, 0); }
+        }
+        .status {
+            font-size: 0.9rem;
+            color: #8b949e;
+        }
+        .bg-glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .glow-1 {
+            top: -100px;
+            right: -100px;
+            background: #58a6ff;
+        }
+        .glow-2 {
+            bottom: -100px;
+            left: -100px;
+            background: #bc8cff;
         }
     </style>
 </head>
 <body>
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
     <div class="container">
-        <h1>code.ribee.de</h1>
-        <p>Seite wird eingerichtet...</p>
+        <div class="logo">code.ribee.de</div>
+        <h1>Coming Soon</h1>
+        <div class="line"></div>
+        <p>Hier entsteht etwas Neues. Wir arbeiten gerade an dieser Seite.</p>
+        <div class="status">
+            <span class="pulse"></span>
+            In Entwicklung
+        </div>
     </div>
 </body>
 </html>
