@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
     <!-- ========== LOGIN / SETUP SCREEN ========== -->
@@ -175,14 +175,7 @@
                         </select>
                         <select id="ga-manufacturer-filter" class="filter-select">
                             <option value="">Alle Hersteller</option>
-                            <option value="Jung">Jung</option>
-                            <option value="ABB">ABB</option>
-                            <option value="MDT">MDT</option>
-                            <option value="Theben">Theben</option>
-                            <option value="Hager">Hager</option>
-                            <option value="Siemens">Siemens</option>
-                            <option value="Gira">Gira</option>
-                            <option value="unknown">Unbekannt</option>
+                            <!-- Dynamisch befüllt -->
                         </select>
                     </div>
 
@@ -223,12 +216,21 @@
             <section id="step-2" class="step-content hidden">
                 <div class="step-header">
                     <h2>Geräteübersicht</h2>
-                    <p>Analyse der erkannten Hersteller, Gerätetypen und möglichen Home Assistant Entitäten.</p>
+                    <p>Analyse der erkannten KNX-Geräte, Hersteller und möglichen Home Assistant Entitäten.</p>
+                </div>
+
+                <!-- Erkannte Geräte (physische KNX-Teilnehmer) -->
+                <div class="device-overview">
+                    <h3>Erkannte KNX-Geräte</h3>
+                    <p class="hint-text">Physische Geräte aus der ETS-Projektdatei mit Hersteller, Typ und Applikation.</p>
+                    <div id="device-list" class="device-list-container">
+                        <!-- Dynamisch gefüllt -->
+                    </div>
                 </div>
 
                 <!-- Hersteller-Übersicht -->
                 <div class="device-overview">
-                    <h3>Erkannte Hersteller &amp; Entitäten</h3>
+                    <h3>Hersteller &amp; Gerätetypen</h3>
                     <div id="manufacturer-summary" class="manufacturer-grid">
                         <!-- Dynamisch gefüllt -->
                     </div>
@@ -237,6 +239,7 @@
                 <!-- Entitäten-Zusammenfassung -->
                 <div class="entity-summary">
                     <h3>Entitäten im Projekt</h3>
+                    <p class="hint-text">Erkannte HA-Entitäten basierend auf den Gruppenadressen und Gerätetypen.</p>
                     <div id="entity-type-summary" class="entity-type-grid">
                         <!-- Dynamisch gefüllt -->
                     </div>
@@ -435,7 +438,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
-    <script src="device-db.js?v=12"></script>
-    <script src="app.js?v=12" defer></script>
+    <script src="device-db.js?v=13"></script>
+    <script src="app.js?v=13" defer></script>
 </body>
 </html>

@@ -1084,6 +1084,70 @@ code {
     line-height: 1.5;
 }
 
+/* Device List (Physical KNX Devices) */
+.device-list-container {
+    overflow-x: auto;
+    margin-bottom: 1rem;
+}
+.device-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.device-table thead th {
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.device-table tbody td {
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+.device-table tbody tr:hover {
+    background: var(--azure-glow);
+}
+.device-type-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+}
+.device-type-badge.schaltaktor { border-color: #22c55e; color: #22c55e; }
+.device-type-badge.jalousieaktor { border-color: #0ea5e9; color: #0ea5e9; }
+.device-type-badge.dimmaktor { border-color: #fbbf24; color: #fbbf24; }
+.device-type-badge.heizungsaktor { border-color: #ef4444; color: #ef4444; }
+.device-type-badge.raumregler { border-color: #f97316; color: #f97316; }
+.device-type-badge.binaereingang { border-color: #a855f7; color: #a855f7; }
+.device-type-badge.wetterstation { border-color: #06b6d4; color: #06b6d4; }
+.device-type-badge.energiesensor { border-color: #10b981; color: #10b981; }
+.device-type-badge.taster { border-color: var(--text-muted); color: var(--text-secondary); }
+.device-type-badge.praesenzmelder { border-color: var(--text-muted); color: var(--text-secondary); }
+.device-type-badge.sonstiges { border-color: var(--border); color: var(--text-muted); }
+.no-devices {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 1rem;
+}
+.potential-devices {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
 /* Manufacturer Grid */
 .manufacturer-grid {
     display: grid;

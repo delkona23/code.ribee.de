@@ -25,21 +25,114 @@ const DPT_MAP = {
 };
 
 // ============================================================
-// Gerätetyp-Erkennung aus ETS ProductRefId
+// Gerätetyp-Erkennung aus ETS DeviceInstance-Daten
 // ============================================================
-function detectDeviceType(productRefId) {
-    if (!productRefId) return 'sonstiges';
-    // URL-Encoding in ETS: .2D = -, .2E = ., .20 = space
-    const decoded = productRefId.toUpperCase()
-        .replace(/\.2D/g, '-').replace(/\.2E/g, '.').replace(/\.20/g, ' ');
-    if (/JAL/i.test(decoded)) return 'jalousieaktor';
-    if (/AKS|AKI|AKU/i.test(decoded)) return 'schaltaktor';
+// Dekodiert ETS ProductRefId: .2D=-, .2E=., .20=space, .5F=_
+function decodeProductRefId(raw) {
+    if (!raw) return '';
+    return raw.replace(/\.([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
+// Erkennt Gerätetyp aus ETS-Daten: ProductRefId + ApplicationProgram Name
+// Nutzt alle verfügbaren Infos: Produkt-Artikelnummer, Applikationsname, KO-Muster
+function detectDeviceType(productRefId, appProgName) {
+    const decoded = decodeProductRefId(productRefId).toUpperCase();
+    const app = (appProgName || '').toUpperCase();
+    const combined = decoded + ' ' + app;
+
+    // --- Priorität 1: Eindeutige Produktkennungen pro Hersteller ---
+
+    // MDT: Artikelnummern in ProductRefId/Applikation
+    if (/\bJAL[-.]?\d/i.test(combined)) return 'jalousieaktor';
+    if (/\bAKH[-.]?\d/i.test(combined)) return 'heizungsaktor';
+    if (/\bAKD[-.]?\d/i.test(combined)) return 'dimmaktor';
+    if (/\bAK[SKI][-.]?\d/i.test(combined)) return 'schaltaktor';
+    if (/\bAKU[-.]?\d/i.test(combined)) return 'schaltaktor'; // Universalaktor = Schaltaktor
+    if (/\bAMS[-.]?\d|AZI[-.]?\d/i.test(combined)) return 'schaltaktor'; // Strommessung
+    if (/\bBE[-.]?GT/i.test(combined)) return 'taster'; // Glastaster
+    if (/\bBE[-.]?\d/i.test(combined)) return 'binaereingang';
+    if (/\bEZ[-.]?\d/i.test(combined)) return 'energiesensor';
+    if (/\bSCN[-.]?WS/i.test(combined)) return 'wetterstation';
+    if (/\bSCN[-.]?[PG]/i.test(combined)) return 'praesenzmelder';
+
+    // ABB/Busch-Jaeger: SA/S, JRA/S, UD/S, VAA/S, VC/S, BE/S, SE/S, EM/S
+    if (/\bJRA\/S/i.test(combined)) return 'jalousieaktor';
+    if (/\bSA\/S/i.test(combined)) return 'schaltaktor';
+    if (/\bUD\/S|LR\/S/i.test(combined)) return 'dimmaktor';
+    if (/\bVAA\/S|VAA\/A|VC\/S/i.test(combined)) return 'heizungsaktor';
+    if (/\bBE\/S|US\/U/i.test(combined)) return 'binaereingang';
+    if (/\bSE\/S|EM\/S/i.test(combined)) return 'energiesensor';
+    if (/\bWES\/A/i.test(combined)) return 'wetterstation';
+    if (/\b6108|6124|CLIMAECO/i.test(combined)) return 'raumregler';
+
+    // Jung: 23xx REGHM (Schalt), 25xx REGHE (Jalousie), 39xx (Dimm), 2336 (Heiz)
+    if (/\b25\d{2}\s*REG|\b2501\s*UP/i.test(combined)) return 'jalousieaktor';
+    if (/\b23\d{2}(?:\.16)?\s*REG/i.test(combined)) return 'schaltaktor';
+    if (/\b230\d{2,3}SR/i.test(combined)) return 'schaltaktor'; // Secure
+    if (/\b39\d{2}\s*REG|\b39004/i.test(combined)) return 'dimmaktor';
+    if (/\b2336\s*REG/i.test(combined)) return 'heizungsaktor';
+    if (/\b36006/i.test(combined)) return 'heizungsaktor';
+    if (/\b4093|5192|5194|KRM.*[ST]S?\s*D/i.test(combined)) return 'raumregler';
+    if (/\b2225\s*WS|\b2224\s*WH/i.test(combined)) return 'wetterstation';
+    if (/\b2103\s*REG\s*ES/i.test(combined)) return 'energiesensor';
+    if (/\b40\d{3}\s*1S\s*E|\b21[12]\d\s*REG/i.test(combined)) return 'binaereingang';
+
+    // Hager: TXA/TYA/TYM (Schalt/Jalousie), TXM/TYM (Heizung)
+    if (/\bTYA6[24][48]|TXA6[24][48]|TYAS6[24][48]|TYM63[02]/i.test(combined)) return 'jalousieaktor';
+    if (/\bTYA6[01]\d|TXA6[01]\d|TYM6[12]\d|TYAS6[01]\d|TYB6/i.test(combined)) return 'schaltaktor';
+    if (/\bTYA66\d|TXA66\d|TYAS66\d|TYF68/i.test(combined)) return 'dimmaktor';
+    if (/\bTXM646|TYM646|TYMS646/i.test(combined)) return 'heizungsaktor';
+    if (/\bTXB3|TYBS7/i.test(combined)) return 'binaereingang';
+    if (/\bTXF1|TE33/i.test(combined)) return 'energiesensor';
+    if (/\bTG053|TXE53/i.test(combined)) return 'wetterstation';
+    if (/\b80440|80660|TX320/i.test(combined)) return 'raumregler';
+
+    // Theben: Schaltaktor RMG/RME/RMA, Jalousie JMG/JME, Heizung HMT/HME
+    if (/\bJM[GEA]/i.test(combined)) return 'jalousieaktor';
+    if (/\bRM[GEAS]/i.test(combined)) return 'schaltaktor';
+    if (/\bDM[GEA]/i.test(combined)) return 'dimmaktor';
+    if (/\bHM[TE]/i.test(combined)) return 'heizungsaktor';
+    if (/\bBM[GEA]/i.test(combined)) return 'binaereingang';
+    if (/\bIMES|SMES/i.test(combined)) return 'energiesensor';
+    if (/\bAMUN|LUNA|THESEUS|THEMUS|PLANO/i.test(combined)) return 'raumregler';
+    if (/\bMETEODATA/i.test(combined)) return 'wetterstation';
+
+    // Siemens: N5xx (Schalt), N52x (Jalousie), N554 (Dimm), RDF (Raumregler)
+    if (/\bN\s*52[34]/i.test(combined)) return 'jalousieaktor';
+    if (/\bN\s*5[0-1][0-9]/i.test(combined)) return 'schaltaktor';
+    if (/\bN\s*554/i.test(combined)) return 'dimmaktor';
+    if (/\bN\s*605/i.test(combined)) return 'heizungsaktor';
+    if (/\bRDF|RDG|QMX/i.test(combined)) return 'raumregler';
+    if (/\bN\s*260|N\s*261/i.test(combined)) return 'binaereingang';
+
+    // Gira: 2170xx (Schalt), 2160xx (Jalousie), 2180xx (Dimm), 2130xx (Heizung)
+    if (/\b216\d{3}/i.test(combined)) return 'jalousieaktor';
+    if (/\b217\d{3}/i.test(combined)) return 'schaltaktor';
+    if (/\b218\d{3}/i.test(combined)) return 'dimmaktor';
+    if (/\b213\d{3}/i.test(combined)) return 'heizungsaktor';
+    if (/\b212\d{3}/i.test(combined)) return 'binaereingang';
+    if (/\b2100\d{2}/i.test(combined)) return 'energiesensor';
+
+    // --- Priorität 2: Generische Applikationsname-Patterns ---
+    // ETS Applikationsname enthält oft die Funktion (z.B. "Jalousie", "Schaltaktor", "Heizung")
+    if (/JALOUSIE|SHUTTER|BLIND|ROLLO|ROLLLADE/i.test(app)) return 'jalousieaktor';
+    if (/SCHALT.*AKTOR|SWITCH.*ACTUATOR|SWITCHING/i.test(app)) return 'schaltaktor';
+    if (/DIMM|DIM.*ACTUATOR/i.test(app)) return 'dimmaktor';
+    if (/HEIZ|HEAT|VALVE|VENTIL.*ANTRIEB|STELLANTRIEB/i.test(app)) return 'heizungsaktor';
+    if (/RAUMTEMP|ROOM.*CONTROLLER|RTR|THERMOSTAT|RAUMREGL/i.test(app)) return 'raumregler';
+    if (/TASTER|PUSH.*BUTTON|TASTSENSOR/i.test(app)) return 'taster';
+    if (/PRÄSENZ|PRESENCE|BEWEGUNG|MOTION/i.test(app)) return 'praesenzmelder';
+    if (/BINÄR.*EINGANG|BINARY.*INPUT|UNIVERSAL.*INTERFACE/i.test(app)) return 'binaereingang';
+    if (/WETTER|WEATHER/i.test(app)) return 'wetterstation';
+    if (/ENERGIE|ENERGY|METER|ZÄHLER/i.test(app)) return 'energiesensor';
+
+    // --- Priorität 3: Fallback auf alte ProductRefId-Patterns ---
     if (/REGHER/i.test(decoded)) return 'jalousieaktor';
-    if (/REGHZ/i.test(decoded)) return 'ventilantrieb';
-    if (/KRM.*SD|RAUMTEMP/i.test(decoded)) return 'raumregler';
+    if (/REGHM/i.test(decoded)) return 'schaltaktor';
+    if (/REGHZ|REG\s*HZ/i.test(decoded)) return 'heizungsaktor';
     if (/TSM|TAST/i.test(decoded)) return 'taster';
     if (/MWW|PRAE/i.test(decoded)) return 'praesenzmelder';
-    if (/847\d|407\d|LED/i.test(decoded)) return 'taster';
+
     return 'sonstiges';
 }
 
@@ -57,7 +150,12 @@ const SENSOR_TYPE_MAP = {
 const MANUFACTURER_MAP = {
     'M-0083': 'Jung', 'M-0001': 'ABB', 'M-0002': 'ABB', 'M-0064': 'ABB',
     'M-0013': 'MDT', 'M-0069': 'Theben', 'M-0004': 'Siemens',
-    'M-0007': 'Hager', 'M-0024': 'Gira', 'M-00C8': 'Weinzierl',
+    'M-0007': 'Hager', 'M-0008': 'Hager', 'M-0024': 'Gira',
+    'M-00C8': 'Weinzierl', 'M-0048': 'Schneider Electric',
+    'M-0003': 'Merten', 'M-0063': 'Busch-Jaeger', 'M-0006': 'Berker',
+    'M-0058': 'Wago', 'M-005B': 'Elsner', 'M-0071': 'Zennio',
+    'M-00DE': 'Loxone', 'M-0050': 'Somfy', 'M-00FA': 'Intesis',
+    'M-009C': 'Ekinex', 'M-012E': 'Basalte',
 };
 
 // Priorität: Aktoren bestimmen den HA-Typ, nicht Sensoren/Taster
@@ -65,8 +163,13 @@ const MANUFACTURER_MAP = {
 const DEVICE_TYPE_PRIORITY = {
     'schaltaktor': 1,     // Schaltet Licht/Steckdosen → bestimmend
     'jalousieaktor': 1,   // Fährt Rolläden → bestimmend
+    'dimmaktor': 1,       // Dimmt Lichter → bestimmend
+    'heizungsaktor': 1,   // Heizungsventile PWM → bestimmend
     'ventilantrieb': 2,   // Heizungsventil → bestimmend für Stellgröße
+    'energiesensor': 2,   // Energiemessung → bestimmend
+    'wetterstation': 2,   // Wetterstation → bestimmend
     'raumregler': 3,      // Hat Taster + Temperatur → Eingang, nicht bestimmend
+    'binaereingang': 3,   // Kontakteingänge → nicht bestimmend
     'taster': 4,          // Nur Eingang
     'praesenzmelder': 4,  // Nur Eingang
     'sonstiges': 5,
@@ -80,6 +183,7 @@ let appState = {
     lockoutUntil: 0,
     currentUser: null,
     parsedGAs: [],
+    deviceInstances: [],  // Erkannte physische Geräte
     existingYaml: null,
     existingAddresses: new Set(),
     currentStep: 1,
@@ -336,6 +440,7 @@ function goToStep(step) {
 
 function resetApp() {
     appState.parsedGAs = [];
+    appState.deviceInstances = [];
     appState.existingYaml = null;
     appState.existingAddresses.clear();
     document.getElementById('parse-results').classList.add('hidden');
@@ -393,10 +498,11 @@ async function handleKnxFile(file) {
     try {
         const zip = await JSZip.loadAsync(file);
         progressFill.style.width = '30%';
-        const gasResult = await parseKnxProject(zip, progressFill);
+        const parseResult = await parseKnxProject(zip, progressFill);
         progressFill.style.width = '90%';
-        appState.parsedGAs = gasResult;
-        renderGATable(gasResult);
+        appState.parsedGAs = parseResult.groupAddresses;
+        appState.deviceInstances = parseResult.deviceInstances;
+        renderGATable(appState.parsedGAs);
         progressFill.style.width = '100%';
         setTimeout(() => {
             loading.classList.add('hidden');
@@ -436,9 +542,34 @@ async function parseKnxProject(zip, progressFill) {
 
     progressFill.style.width = '30%';
 
+    // ---- Phase 0: ApplicationProgram-Daten sammeln ----
+    // ETS speichert Applikationsnamen in Manufacturer-XMLs als <ApplicationProgram>
+    // Diese enthalten den echten Gerätetyp (z.B. "Jalousie", "Schaltaktor")
+    const appProgNames = new Map(); // ApplicationProgramRef → Name/VisibleDescription
+
+    for (const { doc, path } of allDocs) {
+        // ApplicationProgram-Elemente: enthalten Name, VisibleDescription, etc.
+        const appProgs = qAll(doc, 'ApplicationProgram');
+        for (const ap of appProgs) {
+            const id = ap.getAttribute('Id') || '';
+            const name = ap.getAttribute('Name') || ap.getAttribute('VisibleDescription') || '';
+            if (id && name) appProgNames.set(id, name);
+        }
+        // Auch CatalogItem/Product mit Text/Description
+        for (const tag of ['CatalogItem', 'Product', 'Hardware2Program']) {
+            const elems = qAll(doc, tag.toLowerCase());
+            for (const el of elems) {
+                const id = el.getAttribute('Id') || '';
+                const name = el.getAttribute('Name') || el.getAttribute('Text') || el.getAttribute('VisibleDescription') || '';
+                if (id && name && !appProgNames.has(id)) appProgNames.set(id, name);
+            }
+        }
+    }
+    console.log(`KNX Parser: ${appProgNames.size} ApplicationProgram/Catalog-Einträge gefunden`);
+
     // ---- Phase 1: DeviceInstance → ComObjectInstanceRef → Links → GA-Suffix ----
     // ETS speichert die Zuordnung so:
-    //   <DeviceInstance ProductRefId="M-0083_H-...">
+    //   <DeviceInstance ProductRefId="M-0083_H-..." ApplicationProgramRef="M-0083_A-...">
     //     <ComObjectInstanceRef Links="GA-56 GA-338" DatapointType="DPST-1-1"/>
     //   </DeviceInstance>
     // Links enthält GA-Suffixe (z.B. "GA-56"), die GA-ID ist "P-xxxx-0_GA-56"
@@ -447,6 +578,7 @@ async function parseKnxProject(zip, progressFill) {
     const gaSuffixToDpt = new Map();          // "GA-56" → "1.001"
     const gaSuffixToDeviceType = new Map();   // "GA-56" → "schaltaktor"
     const gaSuffixToDeviceAddr = new Map();   // "GA-56" → "2" (physische Adresse)
+    const deviceInstances = [];               // Alle erkannten Geräte für Übersicht
 
     for (const { doc, path } of allDocs) {
         const devices = qAll(doc, 'DeviceInstance');
@@ -455,23 +587,61 @@ async function parseKnxProject(zip, progressFill) {
         console.log(`KNX Parser: ${devices.length} DeviceInstances in ${path}`);
 
         for (const device of devices) {
-            // Hersteller aus beliebigem Attribut extrahieren
+            // Hersteller aus ProductRefId ODER beliebigem Attribut extrahieren
             let manufacturer = 'Unbekannt';
             let mfrId = '';
-            for (const attr of device.attributes) {
-                const m = attr.value.match(/(M-[0-9A-Fa-f]{4})/i);
-                if (m) {
-                    mfrId = m[1].toUpperCase();
-                    manufacturer = MANUFACTURER_MAP[mfrId] || mfrId;
-                    break;
+            const productRefId = device.getAttribute('ProductRefId') || '';
+            const mfrMatch = productRefId.match(/(M-[0-9A-Fa-f]{4})/i);
+            if (mfrMatch) {
+                mfrId = mfrMatch[1].toUpperCase();
+                manufacturer = MANUFACTURER_MAP[mfrId] || mfrId;
+            }
+            if (manufacturer === 'Unbekannt') {
+                // Fallback: beliebiges Attribut mit M-Code
+                for (const attr of device.attributes) {
+                    const m = attr.value.match(/(M-[0-9A-Fa-f]{4})/i);
+                    if (m) {
+                        mfrId = m[1].toUpperCase();
+                        manufacturer = MANUFACTURER_MAP[mfrId] || mfrId;
+                        break;
+                    }
                 }
             }
             if (manufacturer === 'Unbekannt') continue;
 
-            // Gerätetyp aus ProductRefId erkennen
-            const productRefId = device.getAttribute('ProductRefId') || '';
-            const deviceType = detectDeviceType(productRefId);
+            // Applikationsname finden: über ApplicationProgramRef oder Prefixe in ProductRefId
+            let appProgName = '';
+            const appRef = device.getAttribute('ApplicationProgramRef') || '';
+            if (appRef && appProgNames.has(appRef)) {
+                appProgName = appProgNames.get(appRef);
+            }
+            // Auch partielle Matches: ProductRefId-Prefix kann auf Katalog/Produkt zeigen
+            if (!appProgName) {
+                for (const [id, name] of appProgNames) {
+                    if (id.startsWith(mfrId) && productRefId.includes(id.split('_')[1] || '---NOMATCH---')) {
+                        appProgName = name;
+                        break;
+                    }
+                }
+            }
+
+            // Gerätetyp aus ProductRefId + Applikationsname erkennen
+            const deviceType = detectDeviceType(productRefId, appProgName);
             const deviceAddr = device.getAttribute('Address') || '';
+            const deviceName = device.getAttribute('Name') || device.getAttribute('Description') || '';
+
+            // Gerät für Übersicht speichern
+            deviceInstances.push({
+                address: deviceAddr,
+                name: deviceName,
+                manufacturer,
+                mfrId,
+                productRefId: decodeProductRefId(productRefId),
+                appProgName,
+                deviceType,
+            });
+
+            console.log(`KNX Device: ${deviceAddr} | ${manufacturer} | ${deviceType} | ${decodeProductRefId(productRefId).substring(0, 60)} | App: ${appProgName.substring(0, 40)}`);
 
             // ComObjectInstanceRef mit Links-Attribut suchen
             const comObjRefs = qAll(device, 'ComObjectInstanceRef');
@@ -568,11 +738,17 @@ async function parseKnxProject(zip, progressFill) {
             let haType = 'unknown';
             if (deviceType === 'jalousieaktor') {
                 haType = 'cover';
+            } else if (deviceType === 'dimmaktor') {
+                haType = 'light'; // Dimmaktor → immer Licht
             } else if (deviceType === 'schaltaktor') {
-                // Schaltaktor: Licht oder Steckdose, DPT 1.001 = switch
+                // Schaltaktor: Licht oder Steckdose
                 haType = isLightGA(name, address) ? 'light' : 'switch';
-            } else if (deviceType === 'ventilantrieb') {
-                haType = 'sensor'; // Stellgröße → Heizung Sensor
+            } else if (deviceType === 'heizungsaktor' || deviceType === 'ventilantrieb') {
+                haType = 'climate'; // Heizungsaktor → Climate-Entität
+            } else if (deviceType === 'wetterstation') {
+                haType = 'sensor';
+            } else if (deviceType === 'energiesensor') {
+                haType = 'sensor';
             } else {
                 // Kein Aktor → DPT-basiert, dann Name
                 haType = dpt ? (DPT_MAP[dpt] || 'unknown') : 'unknown';
@@ -615,7 +791,15 @@ async function parseKnxProject(zip, progressFill) {
     unique.forEach(g => mfrStats[g.manufacturer] = (mfrStats[g.manufacturer] || 0) + 1);
     console.log(`KNX Parser: ${unique.length} Gruppenadressen, Hersteller:`, mfrStats);
 
-    return unique;
+    // Geräte-Statistik loggen
+    const devStats = {};
+    deviceInstances.forEach(d => {
+        const key = `${d.manufacturer} ${d.deviceType}`;
+        devStats[key] = (devStats[key] || 0) + 1;
+    });
+    console.log(`KNX Parser: ${deviceInstances.length} Geräte erkannt:`, devStats);
+
+    return { groupAddresses: unique, deviceInstances };
 }
 
 function parseGroupAddress(raw) {
@@ -665,7 +849,21 @@ function renderGATable(gas) {
     tbody.innerHTML = '';
     document.getElementById('ga-count').textContent = `${gas.length} Adressen`;
     const mfrs = new Set(gas.map(g => g.manufacturer).filter(m => m !== 'Unbekannt'));
-    document.getElementById('device-count').textContent = `${mfrs.size} Hersteller`;
+    const devCount = (appState.deviceInstances || []).length;
+    document.getElementById('device-count').textContent = `${devCount} Geräte, ${mfrs.size} Hersteller`;
+
+    // Dynamisch Hersteller-Filter befüllen
+    const mfrFilter = document.getElementById('ga-manufacturer-filter');
+    const currentVal = mfrFilter.value;
+    mfrFilter.innerHTML = '<option value="">Alle Hersteller</option>';
+    const allMfrs = [...new Set(gas.map(g => g.manufacturer))].sort();
+    for (const m of allMfrs) {
+        const opt = document.createElement('option');
+        opt.value = m === 'Unbekannt' ? 'unknown' : m;
+        opt.textContent = m;
+        mfrFilter.appendChild(opt);
+    }
+    mfrFilter.value = currentVal;
 
     gas.forEach((ga, idx) => {
         const tr = document.createElement('tr');
@@ -1267,11 +1465,43 @@ function showToast() {
 // ============================================================
 function renderDeviceOverview() {
     const gas = appState.parsedGAs;
+    const devices = appState.deviceInstances || [];
     if (!gas || gas.length === 0) return;
 
-    const analysis = analyzeDevicePotential(gas);
+    const analysis = analyzeDevicePotential(gas, devices);
 
-    // 1. Hersteller-Zusammenfassung
+    // 1. Erkannte Geräte (physische KNX-Teilnehmer)
+    const deviceContainer = document.getElementById('device-list');
+    if (deviceContainer) {
+        deviceContainer.innerHTML = '';
+        if (devices.length > 0) {
+            const table = document.createElement('table');
+            table.className = 'device-table';
+            table.innerHTML = `<thead><tr>
+                <th>Adr.</th><th>Name</th><th>Hersteller</th><th>Gerätetyp</th><th>Produkt / Applikation</th>
+            </tr></thead>`;
+            const tbody = document.createElement('tbody');
+            for (const dev of devices) {
+                const dtLabel = DEVICE_TYPE_LABELS[dev.deviceType] || dev.deviceType;
+                const isKnown = !!DEVICE_DB[dev.manufacturer];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><code>1.1.${dev.address || '?'}</code></td>
+                    <td>${escHtml(dev.name || '—')}</td>
+                    <td>${escHtml(dev.manufacturer)}${isKnown ? ' <span class="mfr-db-badge">DB</span>' : ''}</td>
+                    <td><span class="device-type-badge ${dev.deviceType}">${escHtml(dtLabel)}</span></td>
+                    <td><small>${escHtml((dev.appProgName || dev.productRefId || '').substring(0, 50))}</small></td>
+                `;
+                tbody.appendChild(tr);
+            }
+            table.appendChild(tbody);
+            deviceContainer.appendChild(table);
+        } else {
+            deviceContainer.innerHTML = '<p class="no-devices">Keine Geräte erkannt. Die .knxproj-Datei enthält möglicherweise keine DeviceInstance-Elemente.</p>';
+        }
+    }
+
+    // 2. Hersteller-Zusammenfassung (basiert auf echten Geräten, nicht GAs)
     const mfrContainer = document.getElementById('manufacturer-summary');
     mfrContainer.innerHTML = '';
 
@@ -1290,14 +1520,14 @@ function renderDeviceOverview() {
 
         let typesHtml = '';
         for (const [type, count] of Object.entries(types).sort((a, b) => b[1] - a[1])) {
-            const info = HA_TYPE_INFO[type] || { icon: '❓', label: type };
-            typesHtml += `<div class="mfr-type-row"><span class="mfr-type-icon">${info.icon}</span><span class="mfr-type-label">${info.label}</span><span class="mfr-type-count">${count}</span></div>`;
+            const dtLabel = DEVICE_TYPE_LABELS[type] || type;
+            typesHtml += `<div class="mfr-type-row"><span class="mfr-type-label">${escHtml(dtLabel)}</span><span class="mfr-type-count">${count}</span></div>`;
         }
 
         card.innerHTML = `
             <div class="mfr-card-header">
                 <span class="mfr-name">${escHtml(mfr)}</span>
-                <span class="mfr-total">${total} GAs</span>
+                <span class="mfr-total">${total} Geräte</span>
                 ${isKnown ? '<span class="mfr-db-badge">DB</span>' : ''}
             </div>
             <div class="mfr-card-body">${typesHtml}</div>
@@ -1305,7 +1535,7 @@ function renderDeviceOverview() {
         mfrContainer.appendChild(card);
     }
 
-    // 2. Entitäten-Typ-Zusammenfassung
+    // 3. Entitäten-Typ-Zusammenfassung (aus GAs)
     const entityContainer = document.getElementById('entity-type-summary');
     entityContainer.innerHTML = '';
 
@@ -1313,7 +1543,7 @@ function renderDeviceOverview() {
     for (const type of typeOrder) {
         const count = analysis.totalByType[type] || 0;
         if (count === 0) continue;
-        const info = HA_TYPE_INFO[type] || { icon: '❓', label: type };
+        const info = HA_TYPE_INFO[type] || { icon: '?', label: type };
         const tile = document.createElement('div');
         tile.className = `entity-type-tile ${type}`;
         tile.innerHTML = `
@@ -1324,7 +1554,7 @@ function renderDeviceOverview() {
         entityContainer.appendChild(tile);
     }
 
-    // 3. Potentialanalyse (fehlende KOs)
+    // 4. Potentialanalyse (fehlende KOs)
     const potentialContainer = document.getElementById('potential-list');
     potentialContainer.innerHTML = '';
 
@@ -1338,7 +1568,7 @@ function renderDeviceOverview() {
         card.className = 'potential-card';
 
         let definedHtml = pot.defined.map(ko =>
-            `<div class="ko-row defined"><span class="ko-status-icon">✓</span><span class="ko-name">${escHtml(ko.name)}</span><span class="ko-dpt">${ko.dpt}</span><span class="ko-ha">${ko.haField || '—'}</span></div>`
+            `<div class="ko-row defined"><span class="ko-status-icon">&#10003;</span><span class="ko-name">${escHtml(ko.name)}</span><span class="ko-dpt">${ko.dpt}</span><span class="ko-ha">${ko.haField || '—'}</span></div>`
         ).join('');
 
         let missingHtml = pot.missing.map(ko =>
@@ -1349,6 +1579,7 @@ function renderDeviceOverview() {
             <div class="potential-card-header">
                 <span class="potential-mfr">${escHtml(pot.manufacturer)}</span>
                 <span class="potential-type">${escHtml(pot.label)}</span>
+                <span class="potential-devices">${pot.deviceCount} Gerät${pot.deviceCount !== 1 ? 'e' : ''}</span>
             </div>
             <div class="potential-card-body">
                 <div class="ko-section">

@@ -582,65 +582,71 @@ const HA_TYPE_INFO = {
 // ================================================================
 // Analyse: Was ist im Projekt definiert vs. was wäre möglich
 // ================================================================
-function analyzeDevicePotential(parsedGAs) {
+function analyzeDevicePotential(parsedGAs, deviceInstances) {
+  const devices = deviceInstances || [];
   const result = {
-    manufacturers: {},   // { 'Jung': { light: 5, switch: 3, ... } }
-    totalByType: {},     // { light: 10, switch: 5, ... }
-    potentials: [],      // [ { manufacturer, deviceType, label, defined: [...], missing: [...] } ]
+    manufacturers: {},   // { 'Jung': { schaltaktor: 2, jalousieaktor: 1 } } – echte Geräte
+    totalByType: {},     // { light: 10, switch: 5, ... } – GA-basiert
+    potentials: [],      // [ { manufacturer, deviceType, label, deviceCount, defined, missing } ]
   };
 
-  // 1. Zähle gefundene Entitäten pro Hersteller und Typ
+  // 1. Hersteller-Übersicht aus echten Geräten (DeviceInstances)
+  for (const dev of devices) {
+    const mfr = dev.manufacturer || 'Unbekannt';
+    if (!result.manufacturers[mfr]) result.manufacturers[mfr] = {};
+    const dt = dev.deviceType || 'sonstiges';
+    result.manufacturers[mfr][dt] = (result.manufacturers[mfr][dt] || 0) + 1;
+  }
+
+  // 2. HA-Entitäten-Typen aus GAs zählen
   for (const ga of parsedGAs) {
     if (!ga.selected) continue;
-    const mfr = ga.manufacturer || 'Unbekannt';
-    if (!result.manufacturers[mfr]) result.manufacturers[mfr] = {};
     const type = ga.haType || 'unknown';
-    result.manufacturers[mfr][type] = (result.manufacturers[mfr][type] || 0) + 1;
     result.totalByType[type] = (result.totalByType[type] || 0) + 1;
   }
 
-  // 2. Für jeden bekannten Hersteller: Geräte-DB-Abgleich
-  const knownMfrs = Object.keys(result.manufacturers).filter(m => DEVICE_DB[m]);
+  // 3. Potentialanalyse: Für jeden erkannten Gerätetyp+Hersteller prüfen
+  //    welche KOs im Projekt definiert sind vs. was die DB kennt
+  const devicesByMfrType = new Map(); // "Jung|jalousieaktor" → count
+  for (const dev of devices) {
+    const key = `${dev.manufacturer}|${dev.deviceType}`;
+    devicesByMfrType.set(key, (devicesByMfrType.get(key) || 0) + 1);
+  }
 
-  for (const mfr of knownMfrs) {
-    const db = DEVICE_DB[mfr];
+  for (const [key, devCount] of devicesByMfrType) {
+    const [mfr, devType] = key.split('|');
+    if (!DEVICE_DB[mfr] || !DEVICE_DB[mfr][devType]) continue;
+
+    const devInfo = DEVICE_DB[mfr][devType];
+    const haKos = devInfo.kos.filter(ko => ko.haField);
+    if (haKos.length === 0) continue;
+
+    // Welche GA-DPTs sind für diesen Hersteller im Projekt vorhanden?
     const mfrGAs = parsedGAs.filter(g => g.manufacturer === mfr && g.selected);
+    const definedDpts = new Set(mfrGAs.map(g => g.dpt).filter(d => d !== '—'));
 
-    for (const [devType, devInfo] of Object.entries(db)) {
-      // Finde welche KOs im Projekt definiert sind (haben GA-Zuordnung)
-      const haKos = devInfo.kos.filter(ko => ko.haField);
-      if (haKos.length === 0) continue;
+    const definedKos = [];
+    const missingKos = [];
 
-      // Welche HA-Fields sind im Projekt belegt?
-      const definedFields = new Set();
-      const definedKos = [];
-      const missingKos = [];
-
-      for (const ko of haKos) {
-        // Suche ob es GAs gibt die zu diesem KO passen (DPT + Richtung)
-        const matching = mfrGAs.filter(ga => {
-          if (ga.dpt === '—') return false;
-          return ga.dpt === ko.dpt;
-        });
-        if (matching.length > 0) {
-          definedKos.push(ko);
-          definedFields.add(ko.haField);
-        } else {
-          missingKos.push(ko);
-        }
+    for (const ko of haKos) {
+      if (definedDpts.has(ko.dpt)) {
+        definedKos.push(ko);
+      } else {
+        missingKos.push(ko);
       }
+    }
 
-      // Nur anzeigen wenn mind. 1 KO definiert UND mind. 1 fehlt
-      if (definedKos.length > 0 && missingKos.length > 0) {
-        result.potentials.push({
-          manufacturer: mfr,
-          deviceType: devType,
-          label: devInfo.label,
-          products: devInfo.products,
-          defined: definedKos,
-          missing: missingKos,
-        });
-      }
+    // Nur anzeigen wenn mind. 1 KO definiert UND mind. 1 fehlt
+    if (definedKos.length > 0 && missingKos.length > 0) {
+      result.potentials.push({
+        manufacturer: mfr,
+        deviceType: devType,
+        label: devInfo.label,
+        deviceCount: devCount,
+        products: devInfo.products,
+        defined: definedKos,
+        missing: missingKos,
+      });
     }
   }
 
