@@ -366,9 +366,14 @@ function goToStep(step) {
 
     appState.currentStep = step;
 
-    // Update step content
-    document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
-    document.getElementById(`step-${step}`).classList.add('active');
+    // Update step content (hidden UND active toggling)
+    document.querySelectorAll('.step-content').forEach(el => {
+        el.classList.remove('active');
+        el.classList.add('hidden');
+    });
+    const target = document.getElementById(`step-${step}`);
+    target.classList.remove('hidden');
+    target.classList.add('active');
 
     // Update step indicator
     document.querySelectorAll('.step-indicator .step').forEach(el => {
@@ -494,10 +499,7 @@ async function handleKnxFile(file) {
 }
 
 async function parseKnxProject(zip, progressFill) {
-    const groupAddresses = [];
-    const manufacturers = {};
-
-    // Find all XML files in the project
+    // Collect all XML files
     const xmlFiles = [];
     zip.forEach((path, entry) => {
         if (path.endsWith('.xml') && !entry.dir) {
@@ -509,156 +511,187 @@ async function parseKnxProject(zip, progressFill) {
         throw new Error('Keine XML-Dateien in der .knxproj gefunden. Ist dies eine gültige ETS-Projektdatei?');
     }
 
-    // Parse manufacturer info from Hardware.xml files
+    console.log(`KNX Parser: ${xmlFiles.length} XML-Dateien gefunden`);
+
+    // ---- Phase 1: Alle XML-Dateien laden und klassifizieren ----
+    const projectDocs = [];   // Enthalten GA-Definitionen + Geräte-Zuordnungen
+    const manufacturerIds = new Map(); // ComObjectRef-ID → Hersteller
+
+    progressFill.style.width = '20%';
+
     for (const { path, entry } of xmlFiles) {
-        if (path.includes('M-') && (path.includes('Hardware.xml') || path.includes('Catalog.xml'))) {
-            try {
-                const content = await entry.async('text');
-                const doc = new DOMParser().parseFromString(content, 'text/xml');
-                extractManufacturerInfo(doc, manufacturers, path);
-            } catch (e) {
-                // Skip problematic files
+        try {
+            const content = await entry.async('text');
+            const doc = new DOMParser().parseFromString(content, 'text/xml');
+
+            // Hersteller aus dem Dateipfad extrahieren (M-xxxx in Pfad)
+            const mMatch = path.match(/(M-[0-9A-Fa-f]{4})/i);
+            if (mMatch) {
+                const mId = mMatch[1].toUpperCase();
+                const mName = MANUFACTURER_MAP[mId] || mId;
+                // Alle IDs in dieser Datei dem Hersteller zuordnen
+                doc.querySelectorAll('[Id]').forEach(el => {
+                    const id = el.getAttribute('Id');
+                    if (id) manufacturerIds.set(id, mName);
+                });
             }
+
+            // Projektdateien merken (enthalten GroupAddress und/oder DeviceInstance)
+            if (doc.querySelector('GroupAddress') || doc.querySelector('DeviceInstance') ||
+                doc.querySelector('GroupRange') || doc.querySelector('Area')) {
+                projectDocs.push({ doc, path });
+            }
+        } catch (e) {
+            // Fehlerhafte Dateien überspringen
         }
     }
 
-    progressFill.style.width = '50%';
+    progressFill.style.width = '40%';
+    console.log(`KNX Parser: ${projectDocs.length} Projektdateien, ${manufacturerIds.size} Hersteller-Referenzen`);
 
-    // Parse project files (0.xml, project XMLs) for group addresses
-    for (const { path, entry } of xmlFiles) {
-        // Look for project data files
-        if (path.match(/\/\d+\.xml$/) || path.includes('Project') || path.includes('GroupAddress')) {
-            try {
-                const content = await entry.async('text');
-                const doc = new DOMParser().parseFromString(content, 'text/xml');
-                extractGroupAddresses(doc, groupAddresses, manufacturers);
-            } catch (e) {
-                // Skip problematic files
+    // ---- Phase 2: GA → ComObjectRef → Gerät → Hersteller Verknüpfung ----
+    // Schritt A: ComObjectInstanceRef Sends → GroupAddress-ID Mapping aufbauen
+    const gaIdToManufacturer = new Map();  // GA-Id → Hersteller
+    const gaIdToDpt = new Map();           // GA-Id → DPT (aus Connectors)
+
+    for (const { doc } of projectDocs) {
+        // DeviceInstances durchgehen
+        const deviceInstances = doc.querySelectorAll('DeviceInstance');
+        deviceInstances.forEach(device => {
+            // Hersteller aus der ProductRefId oder dem Id ableiten
+            const productRef = device.getAttribute('ProductRefId') || '';
+            const deviceId = device.getAttribute('Id') || '';
+            let manufacturer = 'Unbekannt';
+
+            // Hersteller-ID aus ProductRefId extrahieren (z.B. M-0069_H-0001....)
+            const mMatch = productRef.match(/(M-[0-9A-Fa-f]{4})/i) ||
+                           deviceId.match(/(M-[0-9A-Fa-f]{4})/i);
+            if (mMatch) {
+                const mId = mMatch[1].toUpperCase();
+                manufacturer = MANUFACTURER_MAP[mId] || mId;
             }
-        }
+
+            // Alle ComObjectInstanceRef → Send → GroupAddressRefId finden
+            const connectors = device.querySelectorAll('Send, Receive');
+            connectors.forEach(conn => {
+                const gaRefId = conn.getAttribute('GroupAddressRefId');
+                if (gaRefId && manufacturer !== 'Unbekannt') {
+                    gaIdToManufacturer.set(gaRefId, manufacturer);
+                }
+
+                // DPT aus Connector-Kontext (DatapointType des ComObjectInstanceRef)
+                const comObjRef = conn.closest('ComObjectInstanceRef');
+                if (comObjRef && gaRefId) {
+                    const dpst = comObjRef.getAttribute('DatapointType') ||
+                                 comObjRef.getAttribute('ReadFlag') ? '' : '';
+                    // DPT manchmal auf übergeordnetem Element
+                    const parentDpt = comObjRef.getAttribute('DatapointType');
+                    if (parentDpt) {
+                        gaIdToDpt.set(gaRefId, normalizeDpt(parentDpt));
+                    }
+                }
+            });
+
+            // Alternative: Direkte GroupAddressRefId in ComObjectInstanceRef
+            const comObjRefs = device.querySelectorAll('ComObjectInstanceRef');
+            comObjRefs.forEach(ref => {
+                const connSend = ref.querySelector('Send');
+                const connRecv = ref.querySelector('Receive');
+                const gaRef = connSend?.getAttribute('GroupAddressRefId') ||
+                              connRecv?.getAttribute('GroupAddressRefId');
+                if (gaRef && manufacturer !== 'Unbekannt') {
+                    gaIdToManufacturer.set(gaRef, manufacturer);
+                }
+                const dpt = ref.getAttribute('DatapointType');
+                if (dpt && gaRef) {
+                    gaIdToDpt.set(gaRef, normalizeDpt(dpt));
+                }
+            });
+        });
+    }
+
+    progressFill.style.width = '60%';
+    console.log(`KNX Parser: ${gaIdToManufacturer.size} GA-Hersteller-Zuordnungen`);
+
+    // ---- Phase 3: Gruppenadressen extrahieren ----
+    const groupAddresses = [];
+
+    for (const { doc } of projectDocs) {
+        const gaElements = doc.querySelectorAll('GroupAddress');
+        gaElements.forEach(ga => {
+            const address = parseGroupAddress(ga.getAttribute('Address'));
+            const name = ga.getAttribute('Name') || '';
+            const description = ga.getAttribute('Description') || '';
+            const id = ga.getAttribute('Id') || '';
+
+            if (!address) return;
+
+            // DPT: direkt am GA-Element, oder aus Connector-Zuordnung
+            let dpt = normalizeDpt(ga.getAttribute('DatapointType') || '');
+            if (!dpt && gaIdToDpt.has(id)) {
+                dpt = gaIdToDpt.get(id);
+            }
+
+            // Hersteller: aus GA-ID → Device Mapping
+            let manufacturer = gaIdToManufacturer.get(id) || 'Unbekannt';
+
+            // Fallback: Hersteller-ID direkt im GA-Id suchen
+            if (manufacturer === 'Unbekannt') {
+                const mMatch = id.match(/(M-[0-9A-Fa-f]{4})/i);
+                if (mMatch) {
+                    const mId = mMatch[1].toUpperCase();
+                    manufacturer = MANUFACTURER_MAP[mId] || mId;
+                }
+            }
+
+            // HA-Typ bestimmen
+            let haType = dpt ? (DPT_MAP[dpt] || 'unknown') : 'unknown';
+            if (haType === 'unknown') {
+                haType = guessTypeFromName(name);
+            }
+
+            groupAddresses.push({
+                address,
+                name: name.trim(),
+                description: description.trim(),
+                dpt: dpt || '—',
+                manufacturer,
+                haType,
+                selected: true,
+            });
+        });
     }
 
     progressFill.style.width = '80%';
 
-    // Deduplicate by address
+    // Deduplizieren
     const seen = new Set();
     const unique = [];
     for (const ga of groupAddresses) {
         if (!seen.has(ga.address)) {
             seen.add(ga.address);
             unique.push(ga);
+        } else {
+            // Wenn Duplikat bessere Infos hat, aktualisieren
+            const existing = unique.find(u => u.address === ga.address);
+            if (existing && existing.manufacturer === 'Unbekannt' && ga.manufacturer !== 'Unbekannt') {
+                existing.manufacturer = ga.manufacturer;
+            }
+            if (existing && existing.dpt === '—' && ga.dpt !== '—') {
+                existing.dpt = ga.dpt;
+            }
         }
     }
 
-    // Sort by address
+    // Sortieren nach Adresse
     unique.sort((a, b) => {
         const pa = a.address.split('/').map(Number);
         const pb = b.address.split('/').map(Number);
         return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2];
     });
 
+    console.log(`KNX Parser: ${unique.length} eindeutige Gruppenadressen gefunden`);
     return unique;
-}
-
-function extractManufacturerInfo(doc, manufacturers, filePath) {
-    // Extract manufacturer ID from path (e.g., M-0083/...)
-    const mMatch = filePath.match(/(M-[0-9A-Fa-f]{4})/);
-    if (!mMatch) return;
-    const mId = mMatch[1];
-    const name = MANUFACTURER_MAP[mId] || mId;
-
-    // Find device references
-    const devices = doc.querySelectorAll('[Id]');
-    devices.forEach(dev => {
-        const id = dev.getAttribute('Id') || '';
-        if (id.startsWith(mId)) {
-            manufacturers[id] = name;
-        }
-    });
-
-    // Store the general manufacturer ID mapping
-    manufacturers[mId] = name;
-}
-
-function extractGroupAddresses(doc, results, manufacturers) {
-    // ETS5/ETS6: GroupAddress elements
-    const gaElements = doc.querySelectorAll('GroupAddress');
-
-    gaElements.forEach(ga => {
-        const address = parseGroupAddress(ga.getAttribute('Address'));
-        const name = ga.getAttribute('Name') || '';
-        const description = ga.getAttribute('Description') || '';
-        const id = ga.getAttribute('Id') || '';
-
-        if (!address) return;
-
-        // Try to find DPT from DatapointType attribute or from connections
-        let dpt = ga.getAttribute('DatapointType') || '';
-        dpt = normalizeDpt(dpt);
-
-        // Determine manufacturer from device connections
-        let manufacturer = 'Unbekannt';
-        const pId = ga.getAttribute('Puid') || id;
-        for (const [key, mName] of Object.entries(manufacturers)) {
-            if (pId.includes(key) || id.includes(key)) {
-                manufacturer = mName;
-                break;
-            }
-        }
-
-        // If manufacturer not found from ID, try from path-based mapping
-        if (manufacturer === 'Unbekannt') {
-            for (const [mId, mName] of Object.entries(MANUFACTURER_MAP)) {
-                if (id.includes(mId)) {
-                    manufacturer = mName;
-                    break;
-                }
-            }
-        }
-
-        // Determine HA type
-        let haType = dpt ? (DPT_MAP[dpt] || 'unknown') : 'unknown';
-
-        // Heuristic from name if no DPT
-        if (haType === 'unknown') {
-            haType = guessTypeFromName(name);
-        }
-
-        results.push({
-            address,
-            name: name.trim(),
-            description: description.trim(),
-            dpt: dpt || '—',
-            manufacturer,
-            haType,
-            selected: true,
-        });
-    });
-
-    // Also check for GroupAddressRange (ETS structure)
-    if (gaElements.length === 0) {
-        const gaRanges = doc.querySelectorAll('GroupRange GroupAddress, GroupAddresses GroupAddress');
-        gaRanges.forEach(ga => {
-            const address = parseGroupAddress(ga.getAttribute('Address'));
-            const name = ga.getAttribute('Name') || '';
-            const dpt = normalizeDpt(ga.getAttribute('DatapointType') || '');
-
-            if (!address) return;
-
-            let haType = dpt ? (DPT_MAP[dpt] || 'unknown') : 'unknown';
-            if (haType === 'unknown') haType = guessTypeFromName(name);
-
-            results.push({
-                address,
-                name: name.trim(),
-                description: '',
-                dpt: dpt || '—',
-                manufacturer: 'Unbekannt',
-                haType,
-                selected: true,
-            });
-        });
-    }
 }
 
 function parseGroupAddress(raw) {
