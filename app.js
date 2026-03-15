@@ -60,6 +60,18 @@ const MANUFACTURER_MAP = {
     'M-0007': 'Hager', 'M-0024': 'Gira', 'M-00C8': 'Weinzierl',
 };
 
+// Priorität: Aktoren bestimmen den HA-Typ, nicht Sensoren/Taster
+// Niedrigere Zahl = höhere Priorität (Aktor gewinnt über Taster/Raumregler)
+const DEVICE_TYPE_PRIORITY = {
+    'schaltaktor': 1,     // Schaltet Licht/Steckdosen → bestimmend
+    'jalousieaktor': 1,   // Fährt Rolläden → bestimmend
+    'ventilantrieb': 2,   // Heizungsventil → bestimmend für Stellgröße
+    'raumregler': 3,      // Hat Taster + Temperatur → Eingang, nicht bestimmend
+    'taster': 4,          // Nur Eingang
+    'praesenzmelder': 4,  // Nur Eingang
+    'sonstiges': 5,
+};
+
 // ============================================================
 // State
 // ============================================================
@@ -468,9 +480,15 @@ async function parseKnxProject(zip, progressFill) {
 
                 for (const gaSuffix of links.trim().split(/\s+/)) {
                     if (!gaSuffix) continue;
-                    gaSuffixToManufacturer.set(gaSuffix, manufacturer);
-                    gaSuffixToDeviceType.set(gaSuffix, deviceType);
-                    if (deviceAddr) gaSuffixToDeviceAddr.set(gaSuffix, deviceAddr);
+                    // Nur überschreiben wenn neuer Gerätetyp höhere Priorität hat (Aktor > Taster/Sensor)
+                    const existingType = gaSuffixToDeviceType.get(gaSuffix);
+                    const existingPrio = existingType ? (DEVICE_TYPE_PRIORITY[existingType] || 99) : 99;
+                    const newPrio = DEVICE_TYPE_PRIORITY[deviceType] || 99;
+                    if (newPrio <= existingPrio) {
+                        gaSuffixToManufacturer.set(gaSuffix, manufacturer);
+                        gaSuffixToDeviceType.set(gaSuffix, deviceType);
+                        if (deviceAddr) gaSuffixToDeviceAddr.set(gaSuffix, deviceAddr);
+                    }
                     if (normalizedDpt) gaSuffixToDpt.set(gaSuffix, normalizedDpt);
                 }
             }
@@ -480,9 +498,14 @@ async function parseKnxProject(zip, progressFill) {
             for (const child of allChildren) {
                 const gaRefId = child.getAttribute('GroupAddressRefId');
                 if (gaRefId) {
-                    gaSuffixToManufacturer.set(gaRefId, manufacturer);
-                    gaSuffixToDeviceType.set(gaRefId, deviceType);
-                    if (deviceAddr) gaSuffixToDeviceAddr.set(gaRefId, deviceAddr);
+                    const existingType = gaSuffixToDeviceType.get(gaRefId);
+                    const existingPrio = existingType ? (DEVICE_TYPE_PRIORITY[existingType] || 99) : 99;
+                    const newPrio = DEVICE_TYPE_PRIORITY[deviceType] || 99;
+                    if (newPrio <= existingPrio) {
+                        gaSuffixToManufacturer.set(gaRefId, manufacturer);
+                        gaSuffixToDeviceType.set(gaRefId, deviceType);
+                        if (deviceAddr) gaSuffixToDeviceAddr.set(gaRefId, deviceAddr);
+                    }
                     const dpt = child.getAttribute('DatapointType');
                     if (dpt) gaSuffixToDpt.set(gaRefId, normalizeDpt(dpt));
                 }
@@ -537,13 +560,20 @@ async function parseKnxProject(zip, progressFill) {
                           || gaSuffixToDeviceAddr.get(id)
                           || '';
 
-            // HA-Typ bestimmen: zuerst DPT, dann Gerätetyp, dann Name
-            let haType = dpt ? (DPT_MAP[dpt] || 'unknown') : 'unknown';
-            // Gerätetyp-basierte Verfeinerung
-            if (deviceType === 'jalousieaktor') haType = 'cover';
-            else if (deviceType === 'ventilantrieb') haType = 'sensor';
-            else if (deviceType === 'raumregler') haType = 'climate';
-            else if (haType === 'unknown') haType = guessTypeFromName(name);
+            // HA-Typ bestimmen: Gerätetyp (Aktor) ist maßgeblich
+            let haType = 'unknown';
+            if (deviceType === 'jalousieaktor') {
+                haType = 'cover';
+            } else if (deviceType === 'schaltaktor') {
+                // Schaltaktor: Licht oder Steckdose, DPT 1.001 = switch
+                haType = isLightGA(name, address) ? 'light' : 'switch';
+            } else if (deviceType === 'ventilantrieb') {
+                haType = 'sensor'; // Stellgröße → Heizung Sensor
+            } else {
+                // Kein Aktor → DPT-basiert, dann Name
+                haType = dpt ? (DPT_MAP[dpt] || 'unknown') : 'unknown';
+                if (haType === 'unknown') haType = guessTypeFromName(name);
+            }
 
             groupAddresses.push({
                 address, name: name.trim(), description: description.trim(),
