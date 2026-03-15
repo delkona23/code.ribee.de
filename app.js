@@ -150,15 +150,33 @@ const SENSOR_TYPE_MAP = {
     '14.056': 'power', '14.068': 'temperature', '14.076': 'voltage',
 };
 
+// KNX Association Manufacturer Codes (offizielle Zuordnung)
 const MANUFACTURER_MAP = {
-    'M-0083': 'Jung', 'M-0001': 'ABB', 'M-0002': 'ABB', 'M-0064': 'ABB',
-    'M-0013': 'MDT', 'M-0069': 'Theben', 'M-0004': 'Siemens',
-    'M-0007': 'Hager', 'M-0008': 'Hager', 'M-0024': 'Gira',
-    'M-00C8': 'Weinzierl', 'M-0048': 'Schneider Electric',
-    'M-0003': 'Merten', 'M-0063': 'Busch-Jaeger', 'M-0006': 'Berker',
-    'M-0058': 'Wago', 'M-005B': 'Elsner', 'M-0071': 'Zennio',
-    'M-00DE': 'Loxone', 'M-0050': 'Somfy', 'M-00FA': 'Intesis',
-    'M-009C': 'Ekinex', 'M-012E': 'Basalte',
+    'M-0001': 'Siemens',
+    'M-0002': 'ABB',
+    'M-0003': 'Albrecht Jung',        // Jung alt
+    'M-0004': 'Jung',                 // Albrecht Jung GmbH
+    'M-0005': 'Bticino',
+    'M-0006': 'Berker',
+    'M-0007': 'Busch-Jaeger',         // ABB / Busch-Jaeger
+    'M-0008': 'Gira',
+    'M-0009': 'Hager',
+    'M-000A': 'Jung',                 // Insta GmbH (OEM für Jung/Gira/Berker)
+    'M-000C': 'Merten',
+    'M-0024': 'Theben',
+    'M-0048': 'Schneider Electric',
+    'M-0050': 'Somfy',
+    'M-0058': 'Wago',
+    'M-005B': 'Elsner',
+    'M-0064': 'ABB',                  // ABB alt
+    'M-0069': 'MDT',                  // MDT Technologies
+    'M-0071': 'Zennio',
+    'M-0083': 'MDT',                  // MDT Technologies (alt/Variante)
+    'M-009C': 'Ekinex',
+    'M-00C8': 'Weinzierl',
+    'M-00DE': 'Loxone',
+    'M-00FA': 'Intesis',
+    'M-012E': 'Basalte',
 };
 
 // Priorität: Aktoren bestimmen den HA-Typ, nicht Sensoren/Taster
@@ -643,10 +661,10 @@ async function parseKnxProject(zip, progressFill) {
                 }
             }
 
-            // WICHTIG: Wenn ProductRefId M-Code = Siemens (M-0004) aber ApplicationProgramRef
+            // WICHTIG: Wenn ProductRefId M-Code = Siemens (M-0001) aber ApplicationProgramRef
             // einen anderen M-Code hat → ApplicationProgramRef-Hersteller ist der echte Hersteller
             // (Viele Geräte nutzen Siemens BCU-Hardware, sind aber von anderen Herstellern)
-            if (mfrId === 'M-0004' && appMfrId && appMfrId !== 'M-0004' && MANUFACTURER_MAP[appMfrId]) {
+            if (mfrId === 'M-0001' && appMfrId && appMfrId !== 'M-0001' && MANUFACTURER_MAP[appMfrId]) {
                 mfrId = appMfrId;
                 manufacturer = MANUFACTURER_MAP[appMfrId];
             }
