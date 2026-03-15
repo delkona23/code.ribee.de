@@ -72,7 +72,10 @@ function detectDeviceType(productRefId, appProgName) {
     if (/\b39\d{2}\s*REG|\b39004/i.test(combined)) return 'dimmaktor';
     if (/\b2336\s*REG/i.test(combined)) return 'heizungsaktor';
     if (/\b36006/i.test(combined)) return 'heizungsaktor';
-    if (/\b4093|5192|5194|KRM.*[ST]S?\s*D/i.test(combined)) return 'raumregler';
+    // Jung Raumcontroller: KRM TS D, 4091-4094, 5192, 5194, Gerätetyp $146F
+    if (/\b40?9[1-4]\b|5192|5194|KRM|KOMPAKT.*RAUM|\$?146F|RAUMCONTROLLER/i.test(combined)) return 'raumregler';
+    // Jung Tastsensoren: 4071-4074 TSM, 4191-4194 TSE, 8471-8474, F40, F50, LS-Serie
+    if (/\b40?7[1-4]\b.*TS|\b41?9[1-4]\b.*TS|\b847[1-4]\b|\bF\s*[45]0\b|TASTSENSOR/i.test(combined)) return 'taster';
     if (/\b2225\s*WS|\b2224\s*WH/i.test(combined)) return 'wetterstation';
     if (/\b2103\s*REG\s*ES/i.test(combined)) return 'energiesensor';
     if (/\b40\d{3}\s*1S\s*E|\b21[12]\d\s*REG/i.test(combined)) return 'binaereingang';
@@ -654,11 +657,15 @@ async function parseKnxProject(zip, progressFill) {
 
                 for (const gaSuffix of links.trim().split(/\s+/)) {
                     if (!gaSuffix) continue;
-                    // Nur überschreiben wenn neuer Gerätetyp höhere Priorität hat (Aktor > Taster/Sensor)
+                    // Prioritätslogik: Aktor > Sensor > Taster > sonstiges
+                    // WICHTIG: 'sonstiges' darf NIEMALS einen bereits zugewiesenen Typ/Hersteller überschreiben!
                     const existingType = gaSuffixToDeviceType.get(gaSuffix);
                     const existingPrio = existingType ? (DEVICE_TYPE_PRIORITY[existingType] || 99) : 99;
                     const newPrio = DEVICE_TYPE_PRIORITY[deviceType] || 99;
-                    if (newPrio <= existingPrio) {
+                    const shouldOverwrite = !existingType                       // Noch kein Typ → immer setzen
+                        || (newPrio < existingPrio)                             // Strikt bessere Priorität
+                        || (newPrio === existingPrio && deviceType !== 'sonstiges'); // Gleiche Prio, aber spezifischer
+                    if (shouldOverwrite) {
                         gaSuffixToManufacturer.set(gaSuffix, manufacturer);
                         gaSuffixToDeviceType.set(gaSuffix, deviceType);
                         if (deviceAddr) gaSuffixToDeviceAddr.set(gaSuffix, deviceAddr);
@@ -675,7 +682,10 @@ async function parseKnxProject(zip, progressFill) {
                     const existingType = gaSuffixToDeviceType.get(gaRefId);
                     const existingPrio = existingType ? (DEVICE_TYPE_PRIORITY[existingType] || 99) : 99;
                     const newPrio = DEVICE_TYPE_PRIORITY[deviceType] || 99;
-                    if (newPrio <= existingPrio) {
+                    const shouldOverwrite = !existingType
+                        || (newPrio < existingPrio)
+                        || (newPrio === existingPrio && deviceType !== 'sonstiges');
+                    if (shouldOverwrite) {
                         gaSuffixToManufacturer.set(gaRefId, manufacturer);
                         gaSuffixToDeviceType.set(gaRefId, deviceType);
                         if (deviceAddr) gaSuffixToDeviceAddr.set(gaRefId, deviceAddr);
