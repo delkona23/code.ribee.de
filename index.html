@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
     <!-- ========== LOGIN / SETUP SCREEN ========== -->
@@ -103,11 +103,16 @@
             <div class="step-line"></div>
             <div class="step" data-step="2">
                 <div class="step-number">2</div>
-                <div class="step-label">YAML prüfen</div>
+                <div class="step-label">Geräteübersicht</div>
             </div>
             <div class="step-line"></div>
             <div class="step" data-step="3">
                 <div class="step-number">3</div>
+                <div class="step-label">YAML prüfen</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="4">
+                <div class="step-number">4</div>
                 <div class="step-label">Generieren</div>
             </div>
         </nav>
@@ -174,6 +179,9 @@
                             <option value="ABB">ABB</option>
                             <option value="MDT">MDT</option>
                             <option value="Theben">Theben</option>
+                            <option value="Hager">Hager</option>
+                            <option value="Siemens">Siemens</option>
+                            <option value="Gira">Gira</option>
                             <option value="unknown">Unbekannt</option>
                         </select>
                     </div>
@@ -211,8 +219,58 @@
                 </div>
             </section>
 
-            <!-- Step 2: Existing YAML Check -->
+            <!-- Step 2: Geräteübersicht & Potentialanalyse -->
             <section id="step-2" class="step-content hidden">
+                <div class="step-header">
+                    <h2>Geräteübersicht</h2>
+                    <p>Analyse der erkannten Hersteller, Gerätetypen und möglichen Home Assistant Entitäten.</p>
+                </div>
+
+                <!-- Hersteller-Übersicht -->
+                <div class="device-overview">
+                    <h3>Erkannte Hersteller &amp; Entitäten</h3>
+                    <div id="manufacturer-summary" class="manufacturer-grid">
+                        <!-- Dynamisch gefüllt -->
+                    </div>
+                </div>
+
+                <!-- Entitäten-Zusammenfassung -->
+                <div class="entity-summary">
+                    <h3>Entitäten im Projekt</h3>
+                    <div id="entity-type-summary" class="entity-type-grid">
+                        <!-- Dynamisch gefüllt -->
+                    </div>
+                </div>
+
+                <!-- Potentialanalyse -->
+                <div class="potential-analysis">
+                    <h3>Zusätzliche Möglichkeiten</h3>
+                    <p class="hint-text">Folgende Kommunikationsobjekte sind laut Geräte-Datenbank möglich, aber noch nicht im ETS-Projekt definiert. Diese könnten in der ETS angelegt werden.</p>
+                    <div id="potential-list" class="potential-cards">
+                        <!-- Dynamisch gefüllt -->
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button class="btn btn-ghost" id="back-to-step-1">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="19" y1="12" x2="5" y2="12"/>
+                            <polyline points="12 19 5 12 12 5"/>
+                        </svg>
+                        Zurück
+                    </button>
+                    <button class="btn btn-primary" id="to-step-3">
+                        Weiter zu Schritt 3
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 3: Existing YAML Check -->
+            <section id="step-3" class="step-content hidden">
                 <div class="step-header">
                     <h2>Bestehende YAML prüfen <span class="optional-badge">Optional</span></h2>
                     <p>Lade eine bestehende <code>configuration.yaml</code> oder <code>knx.yaml</code>, um Duplikate zu vermeiden.</p>
@@ -272,16 +330,16 @@
                 </div>
 
                 <div class="step-actions">
-                    <button class="btn btn-ghost" id="back-to-step-1">
+                    <button class="btn btn-ghost" id="back-to-step-2">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="19" y1="12" x2="5" y2="12"/>
                             <polyline points="12 19 5 12 12 5"/>
                         </svg>
                         Zurück
                     </button>
-                    <button class="btn btn-secondary" id="skip-step-2">Überspringen</button>
-                    <button class="btn btn-primary" id="to-step-3">
-                        Weiter zu Schritt 3
+                    <button class="btn btn-secondary" id="skip-step-3">Überspringen</button>
+                    <button class="btn btn-primary" id="to-step-4">
+                        Weiter zu Schritt 4
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="5" y1="12" x2="19" y2="12"/>
                             <polyline points="12 5 19 12 12 19"/>
@@ -290,8 +348,8 @@
                 </div>
             </section>
 
-            <!-- Step 3: Generate & Download YAML -->
-            <section id="step-3" class="step-content hidden">
+            <!-- Step 4: Generate & Download YAML -->
+            <section id="step-4" class="step-content hidden">
                 <div class="step-header">
                     <h2>YAML generieren & herunterladen</h2>
                     <p>Überprüfe die generierte Konfiguration und lade sie herunter.</p>
@@ -331,7 +389,7 @@
                 </div>
 
                 <div class="step-actions">
-                    <button class="btn btn-ghost" id="back-to-step-2">
+                    <button class="btn btn-ghost" id="back-to-step-3">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="19" y1="12" x2="5" y2="12"/>
                             <polyline points="12 19 5 12 12 5"/>
@@ -377,6 +435,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
-    <script src="app.js?v=11" defer></script>
+    <script src="device-db.js?v=12"></script>
+    <script src="app.js?v=12" defer></script>
 </body>
 </html>

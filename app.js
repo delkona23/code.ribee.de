@@ -297,19 +297,22 @@ function renderUserList() {
 function initNavigation() {
     document.getElementById('to-step-2').addEventListener('click', () => goToStep(2));
     document.getElementById('back-to-step-1').addEventListener('click', () => goToStep(1));
-    document.getElementById('skip-step-2').addEventListener('click', () => {
-        appState.existingYaml = null;
-        appState.existingAddresses.clear();
-        goToStep(3);
-    });
     document.getElementById('to-step-3').addEventListener('click', () => goToStep(3));
     document.getElementById('back-to-step-2').addEventListener('click', () => goToStep(2));
+    document.getElementById('skip-step-3').addEventListener('click', () => {
+        appState.existingYaml = null;
+        appState.existingAddresses.clear();
+        goToStep(4);
+    });
+    document.getElementById('to-step-4').addEventListener('click', () => goToStep(4));
+    document.getElementById('back-to-step-3').addEventListener('click', () => goToStep(3));
     document.getElementById('new-project').addEventListener('click', resetApp);
 }
 
 function goToStep(step) {
-    if (step === 2 && appState.parsedGAs.length === 0) return;
-    if (step === 3) generateYaml();
+    if (step >= 2 && appState.parsedGAs.length === 0) return;
+    if (step === 2) renderDeviceOverview();
+    if (step === 4) generateYaml();
     appState.currentStep = step;
 
     document.querySelectorAll('.step-content').forEach(el => {
@@ -1257,4 +1260,107 @@ function showToast() {
         toast.classList.remove('show');
         setTimeout(() => toast.classList.add('hidden'), 300);
     }, 2000);
+}
+
+// ============================================================
+// STEP 2: GERÄTEÜBERSICHT & POTENTIALANALYSE
+// ============================================================
+function renderDeviceOverview() {
+    const gas = appState.parsedGAs;
+    if (!gas || gas.length === 0) return;
+
+    const analysis = analyzeDevicePotential(gas);
+
+    // 1. Hersteller-Zusammenfassung
+    const mfrContainer = document.getElementById('manufacturer-summary');
+    mfrContainer.innerHTML = '';
+
+    const mfrEntries = Object.entries(analysis.manufacturers)
+        .sort((a, b) => {
+            const sumA = Object.values(a[1]).reduce((s, v) => s + v, 0);
+            const sumB = Object.values(b[1]).reduce((s, v) => s + v, 0);
+            return sumB - sumA;
+        });
+
+    for (const [mfr, types] of mfrEntries) {
+        const total = Object.values(types).reduce((s, v) => s + v, 0);
+        const isKnown = !!DEVICE_DB[mfr];
+        const card = document.createElement('div');
+        card.className = 'manufacturer-card' + (isKnown ? ' known' : '');
+
+        let typesHtml = '';
+        for (const [type, count] of Object.entries(types).sort((a, b) => b[1] - a[1])) {
+            const info = HA_TYPE_INFO[type] || { icon: '❓', label: type };
+            typesHtml += `<div class="mfr-type-row"><span class="mfr-type-icon">${info.icon}</span><span class="mfr-type-label">${info.label}</span><span class="mfr-type-count">${count}</span></div>`;
+        }
+
+        card.innerHTML = `
+            <div class="mfr-card-header">
+                <span class="mfr-name">${escHtml(mfr)}</span>
+                <span class="mfr-total">${total} GAs</span>
+                ${isKnown ? '<span class="mfr-db-badge">DB</span>' : ''}
+            </div>
+            <div class="mfr-card-body">${typesHtml}</div>
+        `;
+        mfrContainer.appendChild(card);
+    }
+
+    // 2. Entitäten-Typ-Zusammenfassung
+    const entityContainer = document.getElementById('entity-type-summary');
+    entityContainer.innerHTML = '';
+
+    const typeOrder = ['light', 'switch', 'cover', 'climate', 'sensor', 'binary_sensor', 'unknown'];
+    for (const type of typeOrder) {
+        const count = analysis.totalByType[type] || 0;
+        if (count === 0) continue;
+        const info = HA_TYPE_INFO[type] || { icon: '❓', label: type };
+        const tile = document.createElement('div');
+        tile.className = `entity-type-tile ${type}`;
+        tile.innerHTML = `
+            <div class="entity-tile-icon">${info.icon}</div>
+            <div class="entity-tile-count">${count}</div>
+            <div class="entity-tile-label">${info.label}</div>
+        `;
+        entityContainer.appendChild(tile);
+    }
+
+    // 3. Potentialanalyse (fehlende KOs)
+    const potentialContainer = document.getElementById('potential-list');
+    potentialContainer.innerHTML = '';
+
+    if (analysis.potentials.length === 0) {
+        potentialContainer.innerHTML = '<p class="no-potentials">Alle verfügbaren Kommunikationsobjekte der erkannten Geräte sind bereits im Projekt definiert.</p>';
+        return;
+    }
+
+    for (const pot of analysis.potentials) {
+        const card = document.createElement('div');
+        card.className = 'potential-card';
+
+        let definedHtml = pot.defined.map(ko =>
+            `<div class="ko-row defined"><span class="ko-status-icon">✓</span><span class="ko-name">${escHtml(ko.name)}</span><span class="ko-dpt">${ko.dpt}</span><span class="ko-ha">${ko.haField || '—'}</span></div>`
+        ).join('');
+
+        let missingHtml = pot.missing.map(ko =>
+            `<div class="ko-row missing"><span class="ko-status-icon">+</span><span class="ko-name">${escHtml(ko.name)}</span><span class="ko-dpt">${ko.dpt}</span><span class="ko-ha">${ko.haField || '—'}</span></div>`
+        ).join('');
+
+        card.innerHTML = `
+            <div class="potential-card-header">
+                <span class="potential-mfr">${escHtml(pot.manufacturer)}</span>
+                <span class="potential-type">${escHtml(pot.label)}</span>
+            </div>
+            <div class="potential-card-body">
+                <div class="ko-section">
+                    <div class="ko-section-title">Im Projekt definiert (${pot.defined.length})</div>
+                    ${definedHtml}
+                </div>
+                <div class="ko-section">
+                    <div class="ko-section-title missing-title">In ETS ergänzbar (${pot.missing.length})</div>
+                    ${missingHtml}
+                </div>
+            </div>
+        `;
+        potentialContainer.appendChild(card);
+    }
 }
