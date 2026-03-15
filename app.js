@@ -535,6 +535,7 @@ async function parseKnxProject(zip, progressFill) {
 
     if (xmlFiles.length === 0) throw new Error('Keine XML-Dateien gefunden.');
     console.log(`KNX Parser: ${xmlFiles.length} XML-Dateien`);
+    xmlFiles.forEach(f => console.log(`  📄 ${f.path}`));
 
     // Load all XML files
     const allDocs = [];
@@ -546,24 +547,56 @@ async function parseKnxProject(zip, progressFill) {
         } catch (e) { /* skip */ }
     }
 
+    progressFill.style.width = '30%';
+
+    // ---- DIAGNOSE: Zeige alle Element-Typen pro XML ----
+    for (const { doc, path, content } of allDocs) {
+        const allElements = Array.from(doc.getElementsByTagName('*'));
+        const tagCounts = {};
+        allElements.forEach(el => {
+            const name = el.localName;
+            tagCounts[name] = (tagCounts[name] || 0) + 1;
+        });
+        // Nur relevante Tags loggen
+        const relevant = Object.entries(tagCounts).filter(([k]) =>
+            /device|group|address|comobj|send|receive|connector|product|manufacturer|instance/i.test(k)
+        );
+        if (relevant.length > 0) {
+            console.log(`📋 ${path}:`, Object.fromEntries(relevant));
+        }
+
+        // Hersteller-IDs im Rohtext suchen
+        const mMatches = content.match(/M-[0-9A-Fa-f]{4}/gi);
+        if (mMatches) {
+            const unique = [...new Set(mMatches.map(m => m.toUpperCase()))];
+            console.log(`  🏭 Hersteller-IDs im Text: ${unique.map(m => `${m} (${MANUFACTURER_MAP[m] || '?'})`).join(', ')}`);
+        }
+    }
+
     progressFill.style.width = '40%';
 
-    // Phase 1: Build GA-RefId → Manufacturer mapping via DeviceInstance → ComObjectInstanceRef → Send/Receive
+    // ---- Phase 1: GA-RefId → Hersteller über DeviceInstance ----
     const gaRefToManufacturer = new Map();
     const gaRefToDpt = new Map();
 
-    for (const { doc, path } of allDocs) {
+    for (const { doc, path, content } of allDocs) {
         const devices = qAll(doc, 'DeviceInstance');
-        if (devices.length === 0) continue;
 
-        console.log(`KNX Parser: ${devices.length} DeviceInstances in ${path}`);
+        if (devices.length > 0) {
+            console.log(`🔧 ${devices.length} DeviceInstances in ${path}`);
+            // Zeige erste 3 Devices detailliert
+            devices.slice(0, 3).forEach((d, i) => {
+                const attrs = {};
+                for (const a of d.attributes) attrs[a.name] = a.value.substring(0, 80);
+                console.log(`  Device[${i}]:`, attrs);
+            });
+        }
 
         for (const device of devices) {
-            // Find manufacturer from ProductRefId or Hardware2ProgramRefId
             let manufacturer = 'Unbekannt';
-            for (const attr of ['ProductRefId', 'Hardware2ProgramRefId', 'Id']) {
-                const val = device.getAttribute(attr) || '';
-                const m = val.match(/(M-[0-9A-Fa-f]{4})/i);
+            // Alle Attribute des Devices nach M-xxxx durchsuchen
+            for (const attr of device.attributes) {
+                const m = attr.value.match(/(M-[0-9A-Fa-f]{4})/i);
                 if (m) {
                     manufacturer = MANUFACTURER_MAP[m[1].toUpperCase()] || m[1].toUpperCase();
                     break;
@@ -572,37 +605,68 @@ async function parseKnxProject(zip, progressFill) {
 
             if (manufacturer === 'Unbekannt') continue;
 
-            // Find all Send and Receive connectors under this device
-            const sends = qAll(device, 'Send');
-            const receives = qAll(device, 'Receive');
-            const connectors = [...sends, ...receives];
-
-            for (const conn of connectors) {
-                const gaRefId = conn.getAttribute('GroupAddressRefId');
-                if (!gaRefId) continue;
-                gaRefToManufacturer.set(gaRefId, manufacturer);
-
-                // Try to get DPT from parent ComObjectInstanceRef
-                const parent = conn.parentElement;
-                if (parent) {
-                    const dpt = parent.getAttribute('DatapointType');
-                    if (dpt) gaRefToDpt.set(gaRefId, normalizeDpt(dpt));
+            // Alle Kindelemente rekursiv nach GroupAddressRefId durchsuchen
+            const allChildren = Array.from(device.getElementsByTagName('*'));
+            for (const child of allChildren) {
+                const gaRefId = child.getAttribute('GroupAddressRefId');
+                if (gaRefId) {
+                    gaRefToManufacturer.set(gaRefId, manufacturer);
                 }
+                // DPT suchen
+                const dpt = child.getAttribute('DatapointType');
+                if (dpt && gaRefId) {
+                    gaRefToDpt.set(gaRefId, normalizeDpt(dpt));
+                } else if (dpt) {
+                    // DPT am ComObjectInstanceRef → nächstes Kind mit GroupAddressRefId suchen
+                    const subChildren = Array.from(child.getElementsByTagName('*'));
+                    for (const sub of subChildren) {
+                        const ref = sub.getAttribute('GroupAddressRefId');
+                        if (ref) gaRefToDpt.set(ref, normalizeDpt(dpt));
+                    }
+                }
+            }
+        }
+
+        // Fallback: Auch in Rohtext nach Connectors suchen falls DOM nicht funktioniert
+        if (devices.length === 0 && content.includes('DeviceInstance')) {
+            console.warn(`⚠️ ${path}: DeviceInstance im Text aber nicht per DOM gefunden!`);
+            // Regex-Fallback für Hersteller-GA-Zuordnung
+            const regex = /ProductRefId="([^"]*M-[0-9A-Fa-f]{4}[^"]*)"/gi;
+            let match;
+            const productRefs = [];
+            while ((match = regex.exec(content)) !== null) {
+                productRefs.push(match[1]);
+            }
+            if (productRefs.length > 0) {
+                console.log(`  📦 ${productRefs.length} ProductRefIds per Regex gefunden`);
             }
         }
     }
 
     progressFill.style.width = '60%';
-    console.log(`KNX Parser: ${gaRefToManufacturer.size} GA→Hersteller Zuordnungen`);
+    console.log(`🏭 ${gaRefToManufacturer.size} GA→Hersteller Zuordnungen`);
+    if (gaRefToManufacturer.size > 0) {
+        const sample = Array.from(gaRefToManufacturer.entries()).slice(0, 5);
+        console.log('  Beispiele:', sample);
+    }
 
-    // Phase 2: Extract GroupAddresses
+    // ---- Phase 2: GroupAddresses extrahieren ----
     const groupAddresses = [];
+    // Sammle alle GA-IDs um später abzugleichen
+    const gaIdMap = new Map(); // GA-Id → GA-Objekt
 
     for (const { doc, path } of allDocs) {
         const gaElements = qAll(doc, 'GroupAddress');
         if (gaElements.length === 0) continue;
 
-        console.log(`KNX Parser: ${gaElements.length} GroupAddresses in ${path}`);
+        console.log(`📍 ${gaElements.length} GroupAddresses in ${path}`);
+        // Zeige erste GA mit allen Attributen
+        if (gaElements.length > 0) {
+            const first = gaElements[0];
+            const attrs = {};
+            for (const a of first.attributes) attrs[a.name] = a.value;
+            console.log('  Erste GA Attribute:', attrs);
+        }
 
         for (const ga of gaElements) {
             const address = parseGroupAddress(ga.getAttribute('Address'));
@@ -612,22 +676,57 @@ async function parseKnxProject(zip, progressFill) {
 
             if (!address) continue;
 
-            // DPT from GA element or from connector mapping
             let dpt = normalizeDpt(ga.getAttribute('DatapointType') || '');
             if (!dpt && gaRefToDpt.has(id)) dpt = gaRefToDpt.get(id);
 
-            // Manufacturer from connector mapping or from ID
             let manufacturer = gaRefToManufacturer.get(id) || 'Unbekannt';
             if (manufacturer === 'Unbekannt') {
                 const m = id.match(/(M-[0-9A-Fa-f]{4})/i);
                 if (m) manufacturer = MANUFACTURER_MAP[m[1].toUpperCase()] || m[1].toUpperCase();
             }
 
-            // HA type
             let haType = dpt ? (DPT_MAP[dpt] || 'unknown') : 'unknown';
             if (haType === 'unknown') haType = guessTypeFromName(name);
 
-            groupAddresses.push({ address, name: name.trim(), description: description.trim(), dpt: dpt || '—', manufacturer, haType, selected: true });
+            const gaObj = { address, name: name.trim(), description: description.trim(), dpt: dpt || '—', manufacturer, haType, selected: true };
+            groupAddresses.push(gaObj);
+            gaIdMap.set(id, gaObj);
+        }
+    }
+
+    // ---- Phase 2b: Fallback – Hersteller aus Rohtext per Regex zuordnen ----
+    // Wenn Phase 1 nichts gefunden hat, versuche über den gesamten Rohtext
+    if (gaRefToManufacturer.size === 0) {
+        console.log('⚠️ Fallback: Versuche Hersteller per Datei-Pfad zuzuordnen...');
+        for (const { content, path } of allDocs) {
+            // Finde alle Hersteller-IDs in dieser Datei
+            const mMatches = content.match(/M-[0-9A-Fa-f]{4}/gi);
+            if (!mMatches) continue;
+            const mIds = [...new Set(mMatches.map(m => m.toUpperCase()))];
+            // Nur wenn genau ein Hersteller in der Datei → alle GAs dieser Datei zuordnen
+            const knownMfrs = mIds.filter(m => MANUFACTURER_MAP[m]);
+            if (knownMfrs.length === 0) continue;
+
+            // Finde GA-Referenzen in diesem Content
+            const gaRefMatches = content.match(/GroupAddressRefId="([^"]+)"/g);
+            if (gaRefMatches) {
+                const primaryMfr = MANUFACTURER_MAP[knownMfrs[0]];
+                for (const match of gaRefMatches) {
+                    const ref = match.match(/"([^"]+)"/)[1];
+                    gaRefToManufacturer.set(ref, primaryMfr);
+                }
+                console.log(`  📎 ${gaRefMatches.length} GA-Refs → ${primaryMfr} (aus ${path})`);
+            }
+        }
+
+        // Nochmal alle GAs mit den neuen Zuordnungen aktualisieren
+        if (gaRefToManufacturer.size > 0) {
+            for (const [gaId, gaObj] of gaIdMap) {
+                if (gaObj.manufacturer === 'Unbekannt' && gaRefToManufacturer.has(gaId)) {
+                    gaObj.manufacturer = gaRefToManufacturer.get(gaId);
+                }
+            }
+            console.log(`🏭 Fallback: ${gaRefToManufacturer.size} Zuordnungen nachgeholt`);
         }
     }
 
@@ -651,10 +750,10 @@ async function parseKnxProject(zip, progressFill) {
         return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2];
     });
 
-    console.log(`KNX Parser: ${unique.length} eindeutige Gruppenadressen`);
-    if (gaRefToManufacturer.size === 0) {
-        console.warn('KNX Parser: Keine Hersteller-Zuordnungen gefunden. Die .knxproj enthält möglicherweise keine Geräte-Zuordnungen.');
-    }
+    console.log(`✅ KNX Parser: ${unique.length} eindeutige Gruppenadressen`);
+    const mfrStats = {};
+    unique.forEach(g => mfrStats[g.manufacturer] = (mfrStats[g.manufacturer] || 0) + 1);
+    console.log('📊 Hersteller-Verteilung:', mfrStats);
 
     return unique;
 }
