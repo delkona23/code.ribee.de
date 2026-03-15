@@ -91,6 +91,7 @@ let appState = {
 const USERS = [
     { username: "admin", hash: "$2b$10$3iOrc980Hjvcjx.xsyPIEO7IIrfiTS2Kkh34VVFzLXA75VBBFhJh2", role: "admin" },
     { username: "007ritter", hash: "$2b$10$aVZReNiNhVgi.TsV6T9flezHXpXD5L0W1uodIYvwgh0hlx/rHydeC", role: "user" },
+    { username: "frank", hash: "$2b$10$v6AVX290OysCUMaxS3ut0O8WTqtRvaP.KBa/23aU5Z9L1MoARyl7S", role: "user" },
 ];
 
 function findUser(username) {
