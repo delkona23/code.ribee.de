@@ -723,66 +723,336 @@ function extractExistingAddresses(yaml) {
 }
 
 // ============================================================
-// YAML GENERATION (Step 3)
+// YAML GENERATION (Step 3) – Intelligente GA-Gruppierung
 // ============================================================
 function generateYaml() {
-    const selected = appState.parsedGAs.filter(g => g.selected && g.haType !== 'unknown');
-    const toGenerate = appState.existingAddresses.size > 0
+    const selected = appState.parsedGAs.filter(g => g.selected);
+    const toProcess = appState.existingAddresses.size > 0
         ? selected.filter(g => !appState.existingAddresses.has(g.address))
         : selected;
 
-    const groups = {};
-    for (const ga of toGenerate) {
-        if (!groups[ga.haType]) groups[ga.haType] = [];
-        groups[ga.haType].push(ga);
+    if (toProcess.length === 0) {
+        document.getElementById('yaml-output').querySelector('code').textContent =
+            '# Keine neuen Gruppenadressen zum Generieren.\n';
+        return;
     }
 
+    const byAddr = new Map(toProcess.map(g => [g.address, g]));
+    const used = new Set();
+    const entities = { cover: [], climate: [], light: [], switch: [], sensor: [], binary_sensor: [] };
+
+    // Phase 1: Rolläden gruppieren (Langzeit + Kurzzeit + Position + Dummy)
+    groupCovers(toProcess, byAddr, used, entities);
+
+    // Phase 2: Heizung gruppieren (IST + Soll + Ventil + Modus + Meldung)
+    groupHeating(toProcess, byAddr, used, entities);
+
+    // Phase 3: Licht/Schalter mit Status-GA paaren
+    groupLightsSwitches(toProcess, byAddr, used, entities);
+
+    // Phase 4: Verbleibende GAs
+    for (const ga of toProcess) {
+        if (used.has(ga.address)) continue;
+        const n = ga.name.toLowerCase();
+        if (/status|meldung|rückm/i.test(n)) {
+            entities.binary_sensor.push({ name: ga.name, state_address: ga.address });
+        } else if (ga.haType === 'sensor' || /temperatur|feuchte|wind|lux|zähler/i.test(n)) {
+            entities.sensor.push({ name: ga.name, state_address: ga.address, type: SENSOR_TYPE_MAP[ga.dpt] || null });
+        } else if (ga.haType !== 'unknown') {
+            entities.switch.push({ name: ga.name, address: ga.address });
+        }
+        used.add(ga.address);
+    }
+
+    // YAML bauen
     const now = new Date().toISOString().split('T')[0];
     let y = `# Generiert von KNX2HA – https://code.ribee.de\n# Datum: ${now}\n\nknx:\n`;
 
-    if (groups.light) {
-        y += `  light:\n`;
-        for (const ga of groups.light) {
-            y += `    - name: "${ga.name}"\n      address: "${ga.address}"\n`;
-            if (ga.dpt === '3.007' || ga.dpt === '5.001') y += `      brightness_address: "${ga.address}"\n`;
-            y += `\n`;
+    if (entities.cover.length) {
+        y += '  cover:\n';
+        for (const c of entities.cover) {
+            y += `    - name: "${c.name}"\n`;
+            y += `      move_long_address: "${c.move_long_address}"\n`;
+            if (c.move_short_address) y += `      move_short_address: "${c.move_short_address}"\n`;
+            if (c.stop_address) y += `      stop_address: "${c.stop_address}"\n`;
+            if (c.position_address) y += `      position_address: "${c.position_address}"\n`;
+            if (c.position_state_address) y += `      position_state_address: "${c.position_state_address}"\n`;
+            y += `      travelling_time_down: 20\n`;
+            y += `      travelling_time_up: 20\n`;
         }
     }
-    if (groups.switch) {
-        y += `  switch:\n`;
-        for (const ga of groups.switch) y += `    - name: "${ga.name}"\n      address: "${ga.address}"\n\n`;
-    }
-    if (groups.cover) {
-        y += `  cover:\n`;
-        for (const ga of groups.cover) y += `    - name: "${ga.name}"\n      move_long_address: "${ga.address}"\n\n`;
-    }
-    if (groups.climate) {
-        y += `  climate:\n`;
-        for (const ga of groups.climate) {
-            y += `    - name: "${ga.name}"\n`;
-            y += (ga.dpt === '9.001' || ga.dpt === '9.002' || ga.dpt === '9.003')
-                ? `      temperature_address: "${ga.address}"\n\n`
-                : `      target_temperature_address: "${ga.address}"\n\n`;
+
+    if (entities.climate.length) {
+        y += '  climate:\n';
+        for (const c of entities.climate) {
+            y += `    - name: "${c.name}"\n`;
+            if (c.temperature_address) y += `      temperature_address: "${c.temperature_address}"\n`;
+            if (c.target_temperature_address) {
+                y += `      target_temperature_address: "${c.target_temperature_address}"\n`;
+                y += `      target_temperature_state_address: "${c.target_temperature_address}"\n`;
+            }
+            if (c.operation_mode_address) {
+                y += `      operation_mode_address: "${c.operation_mode_address}"\n`;
+                y += `      operation_mode_state_address: "${c.operation_mode_address}"\n`;
+            }
+            y += '      min_temp: 16\n';
+            y += '      max_temp: 28\n';
         }
     }
-    if (groups.binary_sensor) {
-        y += `  binary_sensor:\n`;
-        for (const ga of groups.binary_sensor) y += `    - name: "${ga.name}"\n      state_address: "${ga.address}"\n\n`;
-    }
-    if (groups.sensor) {
-        y += `  sensor:\n`;
-        for (const ga of groups.sensor) {
-            y += `    - name: "${ga.name}"\n      state_address: "${ga.address}"\n`;
-            const st = SENSOR_TYPE_MAP[ga.dpt];
-            if (st) y += `      type: ${st}\n`;
-            y += `\n`;
+
+    if (entities.light.length) {
+        y += '  light:\n';
+        for (const l of entities.light) {
+            y += `    - name: "${l.name}"\n`;
+            y += `      address: "${l.address}"\n`;
+            if (l.state_address) y += `      state_address: "${l.state_address}"\n`;
         }
     }
-    if (Object.keys(groups).length === 0) {
-        y += `  # Keine Gruppenadressen zum Generieren ausgewählt.\n`;
+
+    if (entities.switch.length) {
+        y += '  switch:\n';
+        for (const s of entities.switch) {
+            y += `    - name: "${s.name}"\n`;
+            y += `      address: "${s.address}"\n`;
+            if (s.state_address) y += `      state_address: "${s.state_address}"\n`;
+        }
+    }
+
+    if (entities.sensor.length) {
+        y += '  sensor:\n';
+        for (const s of entities.sensor) {
+            y += `    - name: "${s.name}"\n`;
+            y += `      state_address: "${s.state_address}"\n`;
+            if (s.type) y += `      type: ${s.type}\n`;
+        }
+    }
+
+    if (entities.binary_sensor.length) {
+        y += '  binary_sensor:\n';
+        for (const b of entities.binary_sensor) {
+            y += `    - name: "${b.name}"\n`;
+            y += `      state_address: "${b.state_address}"\n`;
+        }
+    }
+
+    if (Object.values(entities).every(arr => arr.length === 0)) {
+        y += '  # Keine Gruppenadressen zum Generieren ausgewählt.\n';
     }
 
     document.getElementById('yaml-output').querySelector('code').textContent = y;
+}
+
+// --- Rolläden gruppieren ---
+// Findet GAs mit "Langzeit" und sucht zugehörige Kurzzeit/Position/Dummy GAs
+function groupCovers(gas, byAddr, used, entities) {
+    for (const ga of gas) {
+        if (used.has(ga.address)) continue;
+        if (!/langzeit/i.test(ga.name)) continue;
+
+        const baseName = ga.name.replace(/\s*Langzeit\s*/i, '').trim();
+        const [h, m, u] = ga.address.split('/').map(Number);
+
+        const cover = { name: baseName, move_long_address: ga.address };
+        used.add(ga.address);
+
+        // Kurzzeit bei +1
+        const kurzAddr = `${h}/${m}/${u + 1}`;
+        if (byAddr.has(kurzAddr) && /kurzzeit/i.test(byAddr.get(kurzAddr).name)) {
+            cover.move_short_address = kurzAddr;
+            cover.stop_address = kurzAddr;
+            used.add(kurzAddr);
+        }
+
+        // Position bei +2
+        const posAddr = `${h}/${m}/${u + 2}`;
+        if (byAddr.has(posAddr) && /position/i.test(byAddr.get(posAddr).name)) {
+            cover.position_address = posAddr;
+            used.add(posAddr);
+        }
+
+        // Dummy/State bei +3
+        const dummyAddr = `${h}/${m}/${u + 3}`;
+        if (byAddr.has(dummyAddr)) {
+            const dummyName = byAddr.get(dummyAddr).name.toLowerCase();
+            if (/dummy|position/i.test(dummyName)) {
+                cover.position_state_address = dummyAddr;
+                used.add(dummyAddr);
+            }
+        }
+
+        entities.cover.push(cover);
+    }
+
+    // Einzelne Cover-GAs (z.B. "Gesamt fahren") ohne Langzeit-Suffix
+    for (const ga of gas) {
+        if (used.has(ga.address)) continue;
+        if (ga.haType === 'cover' && !/kurzzeit|position|dummy/i.test(ga.name)) {
+            entities.cover.push({ name: ga.name, move_long_address: ga.address });
+            used.add(ga.address);
+        }
+    }
+}
+
+// --- Heizung gruppieren ---
+// Gruppiert nach Hauptgruppe + Untergruppe (x/*/y → gleicher Raum)
+// Mittelgruppe bestimmt die Funktion: 0=Ventil, 1=IST, 2=Soll, 3=Basis, 4=Modus, 5=Regler, 6=Meldung
+function groupHeating(gas, byAddr, used, entities) {
+    const heatingGAs = gas.filter(g => !used.has(g.address) && /heiz|stellgr/i.test(g.name));
+    if (heatingGAs.length === 0) return;
+
+    // Nach Hauptgruppe + Untergruppe gruppieren
+    const groups = new Map();
+
+    for (const ga of heatingGAs) {
+        const [h, m, u] = ga.address.split('/').map(Number);
+        const key = `${h}/${u}`;
+
+        if (!groups.has(key)) groups.set(key, {});
+        const group = groups.get(key);
+
+        // Funktion aus dem GA-Namen ableiten
+        const n = ga.name;
+        if (/IST\s*Temp|IST$/i.test(n)) group.ist = ga;
+        else if (/Soll\s*Temp|Solltemp/i.test(n)) group.soll = ga;
+        else if (/Stellgr|stellgr/i.test(n)) group.valve = ga;
+        else if (/Basis\s*Soll/i.test(n)) group.basis = ga;
+        else if (/Betriebsumschalt|Betriebsmodus/i.test(n)) group.mode = ga;
+        else if (/Reglerstatus|Relerstatus/i.test(n)) group.regler = ga;
+        else if (/Meldung\s*Heiz/i.test(n)) group.meldung = ga;
+        else continue; // Unbekannte Heizungs-GA → nicht markieren
+
+        used.add(ga.address);
+    }
+
+    // Entitäten erzeugen
+    for (const [key, group] of groups) {
+        // Raumname extrahieren
+        const sourceGA = group.ist || group.soll || group.valve || group.basis || group.mode;
+        let roomName = '';
+        if (sourceGA) {
+            roomName = sourceGA.name
+                .replace(/^Heizung\s*/i, '')
+                .replace(/IST\s*Temp.*|Soll\s*Temp.*|Solltemp.*|Stellgröße|stellgröße|Basis\s*Soll.*|Betriebsumschalt.*|Reglerstatus|Relerstatus|Meldung\s*Heiz.*|Ventil|IST$/gi, '')
+                .trim();
+        }
+        if (!roomName) roomName = `Zone ${key}`;
+        const displayName = `Heizung ${roomName}`;
+
+        // Climate-Entität (braucht mindestens IST oder Soll)
+        if (group.ist || group.soll) {
+            const climate = { name: displayName };
+            if (group.ist) climate.temperature_address = group.ist.address;
+            if (group.soll) climate.target_temperature_address = group.soll.address;
+            if (group.mode) climate.operation_mode_address = group.mode.address;
+            entities.climate.push(climate);
+        }
+
+        // Ventil-Sensor (Stellgröße → percent)
+        if (group.valve) {
+            entities.sensor.push({
+                name: `${displayName} Ventil`,
+                state_address: group.valve.address,
+                type: 'percent',
+            });
+        }
+
+        // IST-Temperatur als eigener Sensor
+        if (group.ist) {
+            entities.sensor.push({
+                name: group.ist.name,
+                state_address: group.ist.address,
+                type: 'temperature',
+            });
+        }
+
+        // Soll-Temperatur als eigener Sensor
+        if (group.soll) {
+            entities.sensor.push({
+                name: group.soll.name,
+                state_address: group.soll.address,
+                type: 'temperature',
+            });
+        }
+
+        // Basis-Sollwert als Sensor
+        if (group.basis) {
+            entities.sensor.push({
+                name: group.basis.name,
+                state_address: group.basis.address,
+                type: 'temperature',
+            });
+        }
+
+        // Heizmeldung als binary_sensor
+        if (group.meldung) {
+            entities.binary_sensor.push({
+                name: `${displayName} aktiv`,
+                state_address: group.meldung.address,
+            });
+        }
+
+        // Reglerstatus → überspringen (selten als HA-Entität benötigt)
+    }
+}
+
+// --- Licht/Schalter mit Status-GA paaren ---
+function groupLightsSwitches(gas, byAddr, used, entities) {
+    const statusPattern = /\s*Status\s*$/i;
+
+    // Status-GAs nach Basisname indexieren
+    const statusMap = new Map();
+    for (const ga of gas) {
+        if (used.has(ga.address)) continue;
+        if (statusPattern.test(ga.name)) {
+            const baseName = ga.name.replace(statusPattern, '').trim().toLowerCase();
+            // Bei mehreren Status-GAs mit gleichem Namen die erste verwenden
+            if (!statusMap.has(baseName)) statusMap.set(baseName, ga);
+        }
+    }
+
+    // Schalt-GAs verarbeiten und mit Status paaren
+    for (const ga of gas) {
+        if (used.has(ga.address)) continue;
+        if (statusPattern.test(ga.name)) continue;
+        if (/heiz|langzeit|kurzzeit|dummy/i.test(ga.name)) continue;
+        if (/position/i.test(ga.name) && ga.haType === 'cover') continue;
+        if (ga.haType === 'sensor' || ga.haType === 'binary_sensor') continue;
+        if (ga.haType === 'climate') continue;
+
+        const nameLower = ga.name.trim().toLowerCase();
+        const statusGA = statusMap.get(nameLower);
+
+        const isLight = isLightGA(ga.name, ga.address);
+
+        const entity = { name: ga.name, address: ga.address };
+        if (statusGA) {
+            entity.state_address = statusGA.address;
+            used.add(statusGA.address);
+        }
+
+        if (isLight) {
+            entities.light.push(entity);
+        } else {
+            entities.switch.push(entity);
+        }
+        used.add(ga.address);
+    }
+}
+
+// Entscheidet ob eine GA ein Licht oder ein Schalter ist
+function isLightGA(name, address) {
+    const n = name.toLowerCase();
+    // Explizit Schalter
+    if (/steckdose|lüft|rückstau|herd|ventil|pumpe|klappe|garage|tor|automatik/i.test(n)) return false;
+    // Explizit Licht
+    if (/licht|leucht|beleucht|decke|spiegel|halogen|indirekt|spot|led|lampe|bühne|aussenleuchte/i.test(n)) return true;
+    // Adresse: Mittelgruppe 0 = Schalten (meist Licht), Mittelgruppe 2 = Steckdosen
+    if (address) {
+        const mid = parseInt(address.split('/')[1]);
+        if (mid === 2) return false;
+        if (mid === 0) return true;
+    }
+    return true;
 }
 
 // ============================================================
