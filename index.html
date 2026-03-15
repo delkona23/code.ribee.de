@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
     <!-- ========== LOGIN / SETUP SCREEN ========== -->
@@ -16,7 +16,7 @@
         <div class="auth-container">
             <div class="auth-logo">
                 <div class="logo-icon">
-                    <svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="#ff6b35" stroke-width="2.5">
+                    <svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="#0ea5e9" stroke-width="2.5">
                         <rect x="4" y="8" width="40" height="32" rx="4"/>
                         <line x1="16" y1="8" x2="16" y2="40"/>
                         <line x1="32" y1="8" x2="32" y2="40"/>
@@ -26,6 +26,7 @@
                 </div>
                 <h1>KNX<span class="accent">2</span>HA</h1>
                 <p class="subtitle">KNX to Home Assistant Converter</p>
+                <span class="version-tag">Beta 0.1.5</span>
             </div>
 
             <!-- Login -->
@@ -60,7 +61,7 @@
         <header class="app-header">
             <div class="header-left">
                 <div class="header-logo">
-                    <svg viewBox="0 0 48 48" width="28" height="28" fill="none" stroke="#ff6b35" stroke-width="2.5">
+                    <svg viewBox="0 0 48 48" width="28" height="28" fill="none" stroke="#0ea5e9" stroke-width="2.5">
                         <rect x="4" y="8" width="40" height="32" rx="4"/>
                         <line x1="16" y1="8" x2="16" y2="40"/>
                         <line x1="32" y1="8" x2="32" y2="40"/>
@@ -68,6 +69,7 @@
                         <line x1="4" y1="30" x2="44" y2="30"/>
                     </svg>
                     <span class="header-title">KNX<span class="accent">2</span>HA</span>
+                    <span class="header-version">Beta 0.1.5</span>
                 </div>
             </div>
             <div class="header-right">
@@ -121,7 +123,7 @@
 
                 <div id="drop-zone" class="drop-zone">
                     <div class="drop-zone-content">
-                        <svg viewBox="0 0 64 64" width="48" height="48" fill="none" stroke="#ff6b35" stroke-width="2">
+                        <svg viewBox="0 0 64 64" width="48" height="48" fill="none" stroke="#0ea5e9" stroke-width="2">
                             <path d="M44 24L32 12 20 24"/>
                             <line x1="32" y1="12" x2="32" y2="44"/>
                             <path d="M8 40v12a4 4 0 004 4h40a4 4 0 004-4V40"/>
@@ -218,7 +220,7 @@
 
                 <div id="yaml-drop-zone" class="drop-zone drop-zone-small">
                     <div class="drop-zone-content">
-                        <svg viewBox="0 0 64 64" width="36" height="36" fill="none" stroke="#ff6b35" stroke-width="2">
+                        <svg viewBox="0 0 64 64" width="36" height="36" fill="none" stroke="#0ea5e9" stroke-width="2">
                             <path d="M40 8H16a4 4 0 00-4 4v40a4 4 0 004 4h32a4 4 0 004-4V20L40 8z"/>
                             <path d="M40 8v12h12"/>
                             <line x1="20" y1="28" x2="44" y2="28"/>
@@ -367,7 +369,7 @@
 
         <!-- Footer -->
         <footer class="app-footer">
-            <p>KNX2HA &ndash; Alle Daten werden ausschließlich lokal im Browser verarbeitet.</p>
+            <p>KNX2HA &ndash; By Tobias Ritter<span class="footer-separator">|</span>Alle Verarbeitungen sind lokal im Browser<span class="footer-separator">|</span>Für Verwendung und Richtigkeit übernehme ich keine Haftung<span class="footer-separator">|</span>Benutzung auf eigene Gefahr</p>
         </footer>
     </div>
 
@@ -375,6 +377,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
-    <script src="app.js?v=10" defer></script>
+    <script src="app.js?v=11" defer></script>
 </body>
 </html>
