@@ -577,7 +577,8 @@ async function parseKnxProject(zip, progressFill) {
 
             groupAddresses.push({
                 address, name: name.trim(), description: description.trim(),
-                dpt: dpt || '—', manufacturer, haType, selected: true,
+                dpt: dpt || '—', manufacturer, haType,
+                selected: !!dpt, // Nur GAs mit DPT-Wert vorausgewählt
                 deviceType, deviceAddr,
             });
         }
