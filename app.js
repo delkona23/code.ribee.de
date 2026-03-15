@@ -6,10 +6,10 @@
 // ============================================================
 const DPT_MAP = {
     '1.001': 'switch', '1.002': 'switch', '1.003': 'switch',
-    '1.008': 'cover', '1.009': 'cover', '1.010': 'cover',
-    '1.011': 'switch', '1.017': 'switch', '1.022': 'binary_sensor',
+    '1.007': 'cover', '1.008': 'cover', '1.009': 'cover', '1.010': 'cover',
+    '1.011': 'binary_sensor', '1.017': 'switch', '1.022': 'binary_sensor',
     '3.007': 'light', '3.008': 'cover',
-    '5.001': 'light', '5.003': 'sensor', '5.004': 'sensor', '5.005': 'sensor', '5.010': 'sensor',
+    '5.001': 'sensor', '5.003': 'sensor', '5.004': 'sensor', '5.005': 'sensor', '5.010': 'sensor',
     '7.001': 'sensor', '7.012': 'sensor', '7.013': 'sensor', '8.001': 'sensor',
     '9.001': 'sensor', '9.002': 'sensor', '9.003': 'sensor', '9.004': 'sensor',
     '9.005': 'sensor', '9.006': 'sensor', '9.007': 'sensor', '9.008': 'sensor',
@@ -21,7 +21,27 @@ const DPT_MAP = {
     '14.056': 'sensor', '14.068': 'sensor', '14.076': 'sensor',
     '16.000': 'sensor', '16.001': 'sensor', '17.001': 'sensor',
     '20.102': 'climate', '20.105': 'climate',
+    '22.101': 'sensor',
 };
+
+// ============================================================
+// Gerätetyp-Erkennung aus ETS ProductRefId
+// ============================================================
+function detectDeviceType(productRefId) {
+    if (!productRefId) return 'sonstiges';
+    // URL-Encoding in ETS: .2D = -, .2E = ., .20 = space
+    const decoded = productRefId.toUpperCase()
+        .replace(/\.2D/g, '-').replace(/\.2E/g, '.').replace(/\.20/g, ' ');
+    if (/JAL/i.test(decoded)) return 'jalousieaktor';
+    if (/AKS|AKI|AKU/i.test(decoded)) return 'schaltaktor';
+    if (/REGHER/i.test(decoded)) return 'jalousieaktor';
+    if (/REGHZ/i.test(decoded)) return 'ventilantrieb';
+    if (/KRM.*SD|RAUMTEMP/i.test(decoded)) return 'raumregler';
+    if (/TSM|TAST/i.test(decoded)) return 'taster';
+    if (/MWW|PRAE/i.test(decoded)) return 'praesenzmelder';
+    if (/847\d|407\d|LED/i.test(decoded)) return 'taster';
+    return 'sonstiges';
+}
 
 const SENSOR_TYPE_MAP = {
     '9.001': 'temperature', '9.002': 'temperature', '9.003': 'temperature',
@@ -409,6 +429,8 @@ async function parseKnxProject(zip, progressFill) {
 
     const gaSuffixToManufacturer = new Map(); // "GA-56" → "Jung"
     const gaSuffixToDpt = new Map();          // "GA-56" → "1.001"
+    const gaSuffixToDeviceType = new Map();   // "GA-56" → "schaltaktor"
+    const gaSuffixToDeviceAddr = new Map();   // "GA-56" → "2" (physische Adresse)
 
     for (const { doc, path } of allDocs) {
         const devices = qAll(doc, 'DeviceInstance');
@@ -417,16 +439,23 @@ async function parseKnxProject(zip, progressFill) {
         console.log(`KNX Parser: ${devices.length} DeviceInstances in ${path}`);
 
         for (const device of devices) {
-            // Hersteller aus beliebigem Attribut extrahieren (ProductRefId, Hardware2ProgramRefId, Id)
+            // Hersteller aus beliebigem Attribut extrahieren
             let manufacturer = 'Unbekannt';
+            let mfrId = '';
             for (const attr of device.attributes) {
                 const m = attr.value.match(/(M-[0-9A-Fa-f]{4})/i);
                 if (m) {
-                    manufacturer = MANUFACTURER_MAP[m[1].toUpperCase()] || m[1].toUpperCase();
+                    mfrId = m[1].toUpperCase();
+                    manufacturer = MANUFACTURER_MAP[mfrId] || mfrId;
                     break;
                 }
             }
             if (manufacturer === 'Unbekannt') continue;
+
+            // Gerätetyp aus ProductRefId erkennen
+            const productRefId = device.getAttribute('ProductRefId') || '';
+            const deviceType = detectDeviceType(productRefId);
+            const deviceAddr = device.getAttribute('Address') || '';
 
             // ComObjectInstanceRef mit Links-Attribut suchen
             const comObjRefs = qAll(device, 'ComObjectInstanceRef');
@@ -437,20 +466,23 @@ async function parseKnxProject(zip, progressFill) {
                 const dpt = ref.getAttribute('DatapointType');
                 const normalizedDpt = dpt ? normalizeDpt(dpt) : '';
 
-                // Links kann mehrere GA-Suffixe enthalten (space-separated)
                 for (const gaSuffix of links.trim().split(/\s+/)) {
                     if (!gaSuffix) continue;
                     gaSuffixToManufacturer.set(gaSuffix, manufacturer);
+                    gaSuffixToDeviceType.set(gaSuffix, deviceType);
+                    if (deviceAddr) gaSuffixToDeviceAddr.set(gaSuffix, deviceAddr);
                     if (normalizedDpt) gaSuffixToDpt.set(gaSuffix, normalizedDpt);
                 }
             }
 
-            // Fallback: Auch GroupAddressRefId (andere ETS-Versionen)
+            // Fallback: GroupAddressRefId (andere ETS-Versionen)
             const allChildren = Array.from(device.getElementsByTagName('*'));
             for (const child of allChildren) {
                 const gaRefId = child.getAttribute('GroupAddressRefId');
                 if (gaRefId) {
                     gaSuffixToManufacturer.set(gaRefId, manufacturer);
+                    gaSuffixToDeviceType.set(gaRefId, deviceType);
+                    if (deviceAddr) gaSuffixToDeviceAddr.set(gaRefId, deviceAddr);
                     const dpt = child.getAttribute('DatapointType');
                     if (dpt) gaSuffixToDpt.set(gaRefId, normalizeDpt(dpt));
                 }
@@ -459,7 +491,10 @@ async function parseKnxProject(zip, progressFill) {
     }
 
     progressFill.style.width = '50%';
-    console.log(`KNX Parser: ${gaSuffixToManufacturer.size} GA→Hersteller Zuordnungen`);
+    // Gerätetyp-Statistik loggen
+    const dtStats = {};
+    gaSuffixToDeviceType.forEach(dt => dtStats[dt] = (dtStats[dt] || 0) + 1);
+    console.log(`KNX Parser: ${gaSuffixToManufacturer.size} GA→Hersteller, Gerätetypen:`, dtStats);
 
     // ---- Phase 2: GroupAddresses extrahieren und mit Hersteller anreichern ----
     const groupAddresses = [];
@@ -492,13 +527,28 @@ async function parseKnxProject(zip, progressFill) {
                             || gaSuffixToManufacturer.get(id)
                             || 'Unbekannt';
 
-            // HA-Typ bestimmen
+            // Gerätetyp: über Suffix oder volle ID
+            let deviceType = gaSuffixToDeviceType.get(suffix)
+                          || gaSuffixToDeviceType.get(id)
+                          || 'sonstiges';
+
+            // Geräteadresse (physikalisch)
+            let deviceAddr = gaSuffixToDeviceAddr.get(suffix)
+                          || gaSuffixToDeviceAddr.get(id)
+                          || '';
+
+            // HA-Typ bestimmen: zuerst DPT, dann Gerätetyp, dann Name
             let haType = dpt ? (DPT_MAP[dpt] || 'unknown') : 'unknown';
-            if (haType === 'unknown') haType = guessTypeFromName(name);
+            // Gerätetyp-basierte Verfeinerung
+            if (deviceType === 'jalousieaktor') haType = 'cover';
+            else if (deviceType === 'ventilantrieb') haType = 'sensor';
+            else if (deviceType === 'raumregler') haType = 'climate';
+            else if (haType === 'unknown') haType = guessTypeFromName(name);
 
             groupAddresses.push({
                 address, name: name.trim(), description: description.trim(),
                 dpt: dpt || '—', manufacturer, haType, selected: true,
+                deviceType, deviceAddr,
             });
         }
     }
@@ -514,6 +564,8 @@ async function parseKnxProject(zip, progressFill) {
             const existing = seen.get(ga.address);
             if (existing.manufacturer === 'Unbekannt' && ga.manufacturer !== 'Unbekannt') existing.manufacturer = ga.manufacturer;
             if (existing.dpt === '—' && ga.dpt !== '—') existing.dpt = ga.dpt;
+            if (existing.deviceType === 'sonstiges' && ga.deviceType !== 'sonstiges') existing.deviceType = ga.deviceType;
+            if (!existing.deviceAddr && ga.deviceAddr) existing.deviceAddr = ga.deviceAddr;
         }
     }
 
@@ -589,6 +641,7 @@ function renderGATable(gas) {
             <td title="${escHtml(ga.description)}">${escHtml(ga.name)}</td>
             <td>${escHtml(ga.dpt)}</td>
             <td>${escHtml(ga.manufacturer)}</td>
+            <td><small>${escHtml(ga.deviceType || '')}</small></td>
             <td>
                 <select data-idx="${idx}" class="ha-type-select">
                     <option value="light" ${ga.haType === 'light' ? 'selected' : ''}>Licht</option>
@@ -723,8 +776,13 @@ function extractExistingAddresses(yaml) {
 }
 
 // ============================================================
-// YAML GENERATION (Step 3) – Intelligente GA-Gruppierung
+// YAML GENERATION (Step 3) – Geräte-zentrierte GA-Gruppierung
 // ============================================================
+// Strategie: Adressstruktur + Gerätetyp bestimmen die Gruppierung
+// Cover: Jalousieaktor-GAs oder Mittelgruppe 1 → Blöcke à 3-4 GAs
+// Heizung: Hauptgruppe 8/9 → Mittelgruppe = Funktion (0=Ventil, 1=IST, 2=Soll, 4=Modus, 6=Meldung)
+// Licht/Schalter: Mittelgruppe 0/2 → Status-GA in Mittelgruppe 5/6
+
 function generateYaml() {
     const selected = appState.parsedGAs.filter(g => g.selected);
     const toProcess = appState.existingAddresses.size > 0
@@ -741,23 +799,30 @@ function generateYaml() {
     const used = new Set();
     const entities = { cover: [], climate: [], light: [], switch: [], sensor: [], binary_sensor: [] };
 
-    // Phase 1: Rolläden gruppieren (Langzeit + Kurzzeit + Position + Dummy)
+    // Phase 1: Rolläden gruppieren (adressbasiert + Gerätetyp)
     groupCovers(toProcess, byAddr, used, entities);
 
-    // Phase 2: Heizung gruppieren (IST + Soll + Ventil + Modus + Meldung)
+    // Phase 2: Heizung gruppieren (Hauptgruppe 8/9, Mittelgruppe = Funktion)
     groupHeating(toProcess, byAddr, used, entities);
 
     // Phase 3: Licht/Schalter mit Status-GA paaren
     groupLightsSwitches(toProcess, byAddr, used, entities);
 
-    // Phase 4: Verbleibende GAs
+    // Phase 4: Verbleibende GAs als Sensoren/Binärsensoren
     for (const ga of toProcess) {
         if (used.has(ga.address)) continue;
+        // Taster und Präsenzmelder überspringen (keine standalone HA-Entitäten)
+        if (ga.deviceType === 'taster' || ga.deviceType === 'praesenzmelder') {
+            used.add(ga.address);
+            continue;
+        }
         const n = ga.name.toLowerCase();
         if (/status|meldung|rückm/i.test(n)) {
             entities.binary_sensor.push({ name: ga.name, state_address: ga.address });
         } else if (ga.haType === 'sensor' || /temperatur|feuchte|wind|lux|zähler/i.test(n)) {
             entities.sensor.push({ name: ga.name, state_address: ga.address, type: SENSOR_TYPE_MAP[ga.dpt] || null });
+        } else if (ga.haType === 'binary_sensor') {
+            entities.binary_sensor.push({ name: ga.name, state_address: ga.address });
         } else if (ga.haType !== 'unknown') {
             entities.switch.push({ name: ga.name, address: ga.address });
         }
@@ -843,50 +908,74 @@ function generateYaml() {
 }
 
 // --- Rolläden gruppieren ---
-// Findet GAs mit "Langzeit" und sucht zugehörige Kurzzeit/Position/Dummy GAs
+// Erkennung: (1) Gerätetyp jalousieaktor, (2) GA-Name mit Langzeit/Auf-Ab/Rollo,
+// (3) Mittelgruppe 1 für Hauptgruppe 3/4
+// Gruppierung: Basis-GA (Langzeit/Auf-Ab) + Kurzzeit(+1) + Position(+2) + evtl. Dummy(+3)
+// 3-GA Cover: kein +3 → Position bei +2 wird position_state_address (read-only)
+// 4-GA Cover: mit +3 → Position bei +2 wird position_address, +3 wird position_state_address
 function groupCovers(gas, byAddr, used, entities) {
+    // Finde alle Cover-Basis-GAs (Langzeit/Auf-Ab = Startpunkt eines Cover-Blocks)
+    const coverBases = [];
     for (const ga of gas) {
         if (used.has(ga.address)) continue;
-        if (!/langzeit/i.test(ga.name)) continue;
+        const n = ga.name.toLowerCase();
+        // Cover-Basis erkennen: "Langzeit" im Namen ODER DPT 1.008 (Up/Down) am Anfang eines Blocks
+        if (/langzeit|auf.?ab/i.test(n) ||
+            (ga.deviceType === 'jalousieaktor' && /fahren|auf|ab/i.test(n) && !/kurzzeit|position|dummy|stopp/i.test(n))) {
+            coverBases.push(ga);
+        }
+    }
 
-        const baseName = ga.name.replace(/\s*Langzeit\s*/i, '').trim();
+    for (const ga of coverBases) {
+        if (used.has(ga.address)) continue;
+        // Raumname extrahieren
+        const baseName = ga.name
+            .replace(/\s*(Langzeit|Auf.?Ab|fahren)\s*/gi, '')
+            .replace(/\s+/g, ' ').trim();
         const [h, m, u] = ga.address.split('/').map(Number);
 
-        const cover = { name: baseName, move_long_address: ga.address };
+        const cover = { name: baseName || ga.name, move_long_address: ga.address };
         used.add(ga.address);
 
-        // Kurzzeit bei +1
+        // Kurzzeit/Stopp bei +1
         const kurzAddr = `${h}/${m}/${u + 1}`;
-        if (byAddr.has(kurzAddr) && /kurzzeit/i.test(byAddr.get(kurzAddr).name)) {
-            cover.move_short_address = kurzAddr;
-            cover.stop_address = kurzAddr;
-            used.add(kurzAddr);
+        if (byAddr.has(kurzAddr)) {
+            const kn = byAddr.get(kurzAddr).name.toLowerCase();
+            if (/kurzzeit|stopp|stop|step|schritt/i.test(kn) ||
+                byAddr.get(kurzAddr).deviceType === 'jalousieaktor') {
+                cover.move_short_address = kurzAddr;
+                cover.stop_address = kurzAddr;
+                used.add(kurzAddr);
+            }
         }
+
+        // Prüfe ob 4-GA Block (Dummy/State bei +3)
+        const dummyAddr = `${h}/${m}/${u + 3}`;
+        const has4thGA = byAddr.has(dummyAddr) && /dummy|position|state/i.test(byAddr.get(dummyAddr).name);
 
         // Position bei +2
         const posAddr = `${h}/${m}/${u + 2}`;
-        if (byAddr.has(posAddr) && /position/i.test(byAddr.get(posAddr).name)) {
-            cover.position_address = posAddr;
-            used.add(posAddr);
-        }
-
-        // Dummy/State bei +3
-        const dummyAddr = `${h}/${m}/${u + 3}`;
-        if (byAddr.has(dummyAddr)) {
-            const dummyName = byAddr.get(dummyAddr).name.toLowerCase();
-            if (/dummy|position/i.test(dummyName)) {
+        if (byAddr.has(posAddr)) {
+            if (has4thGA) {
+                // 4-GA Block: +2 = position_address (write), +3 = position_state_address (read)
+                cover.position_address = posAddr;
                 cover.position_state_address = dummyAddr;
+                used.add(posAddr);
                 used.add(dummyAddr);
+            } else {
+                // 3-GA Block: +2 = position_state_address (read-only, kein Write!)
+                cover.position_state_address = posAddr;
+                used.add(posAddr);
             }
         }
 
         entities.cover.push(cover);
     }
 
-    // Einzelne Cover-GAs (z.B. "Gesamt fahren") ohne Langzeit-Suffix
+    // Gesamt-Fahr-GAs (z.B. "EG Gesamt fahren") als einzelne Cover
     for (const ga of gas) {
         if (used.has(ga.address)) continue;
-        if (ga.haType === 'cover' && !/kurzzeit|position|dummy/i.test(ga.name)) {
+        if (ga.haType === 'cover' && /gesamt/i.test(ga.name) && !/kurzzeit|position|dummy|status/i.test(ga.name)) {
             entities.cover.push({ name: ga.name, move_long_address: ga.address });
             used.add(ga.address);
         }
@@ -894,45 +983,78 @@ function groupCovers(gas, byAddr, used, entities) {
 }
 
 // --- Heizung gruppieren ---
-// Gruppiert nach Hauptgruppe + Untergruppe (x/*/y → gleicher Raum)
-// Mittelgruppe bestimmt die Funktion: 0=Ventil, 1=IST, 2=Soll, 3=Basis, 4=Modus, 5=Regler, 6=Meldung
+// Hauptgruppe 8 (EG) und 9 (OG): gleiche Untergruppe y = gleicher Raum
+// Mittelgruppe bestimmt die Funktion:
+//   0 = Ventil/Stellgröße (→ sensor percent)
+//   1 = IST-Temperatur (→ climate temperature_address)
+//   2 = Soll-Temperatur (→ climate target_temperature_address)
+//   3 = Basis-Sollwert (überspringen, intern)
+//   4 = Betriebsmodus (→ climate operation_mode_address)
+//   5 = Reglerstatus (→ sensor)
+//   6 = Heizmeldung (→ binary_sensor)
 function groupHeating(gas, byAddr, used, entities) {
-    const heatingGAs = gas.filter(g => !used.has(g.address) && /heiz|stellgr/i.test(g.name));
+    // Alle GAs in Hauptgruppe 8 und 9 sammeln
+    const heatingGAs = gas.filter(g => {
+        if (used.has(g.address)) return false;
+        const h = parseInt(g.address.split('/')[0]);
+        return h === 8 || h === 9;
+    });
     if (heatingGAs.length === 0) return;
 
-    // Nach Hauptgruppe + Untergruppe gruppieren
+    // Auch GAs mit "Heiz/Stellgr" im Namen aus anderen Gruppen
+    const extraHeating = gas.filter(g => {
+        if (used.has(g.address)) return false;
+        const h = parseInt(g.address.split('/')[0]);
+        if (h === 8 || h === 9) return false; // Bereits erfasst
+        return g.deviceType === 'ventilantrieb' || g.deviceType === 'raumregler' ||
+               /heiz|stellgr/i.test(g.name);
+    });
+
+    const allHeating = [...heatingGAs, ...extraHeating];
+
+    // Nach Hauptgruppe + Untergruppe gruppieren (gleicher Raum)
     const groups = new Map();
 
-    for (const ga of heatingGAs) {
+    for (const ga of allHeating) {
         const [h, m, u] = ga.address.split('/').map(Number);
-        const key = `${h}/${u}`;
+        const key = `${h}/${u}`; // Hauptgruppe/Untergruppe = Raum-Identifikator
 
-        if (!groups.has(key)) groups.set(key, {});
+        if (!groups.has(key)) groups.set(key, { hauptgruppe: h });
         const group = groups.get(key);
 
-        // Funktion aus dem GA-Namen ableiten
-        const n = ga.name;
-        if (/IST\s*Temp|IST$/i.test(n)) group.ist = ga;
-        else if (/Soll\s*Temp|Solltemp/i.test(n)) group.soll = ga;
-        else if (/Stellgr|stellgr/i.test(n)) group.valve = ga;
-        else if (/Basis\s*Soll/i.test(n)) group.basis = ga;
-        else if (/Betriebsumschalt|Betriebsmodus/i.test(n)) group.mode = ga;
-        else if (/Reglerstatus|Relerstatus/i.test(n)) group.regler = ga;
-        else if (/Meldung\s*Heiz/i.test(n)) group.meldung = ga;
-        else continue; // Unbekannte Heizungs-GA → nicht markieren
+        // Funktion aus Mittelgruppe ableiten (zuverlässiger als Name)
+        if (h === 8 || h === 9) {
+            switch (m) {
+                case 0: group.valve = ga; break;    // Stellgröße
+                case 1: group.ist = ga; break;      // IST-Temperatur
+                case 2: group.soll = ga; break;     // Soll-Temperatur
+                case 3: group.basis = ga; break;    // Basis-Sollwert
+                case 4: group.mode = ga; break;     // Betriebsmodus
+                case 5: group.regler = ga; break;   // Reglerstatus
+                case 6: group.meldung = ga; break;  // Heizmeldung
+            }
+        } else {
+            // Für GAs aus anderen Gruppen: Name-basiert
+            const n = ga.name;
+            if (/IST\s*Temp|IST$/i.test(n)) group.ist = ga;
+            else if (/Soll\s*Temp|Solltemp/i.test(n)) group.soll = ga;
+            else if (/Stellgr/i.test(n)) group.valve = ga;
+            else if (/Betriebsumschalt|Betriebsmodus/i.test(n)) group.mode = ga;
+            else if (/Meldung\s*Heiz/i.test(n)) group.meldung = ga;
+        }
 
         used.add(ga.address);
     }
 
     // Entitäten erzeugen
     for (const [key, group] of groups) {
-        // Raumname extrahieren
-        const sourceGA = group.ist || group.soll || group.valve || group.basis || group.mode;
+        // Raumname aus IST- oder Soll-GA extrahieren
+        const sourceGA = group.ist || group.soll || group.valve;
         let roomName = '';
         if (sourceGA) {
             roomName = sourceGA.name
                 .replace(/^Heizung\s*/i, '')
-                .replace(/IST\s*Temp.*|Soll\s*Temp.*|Solltemp.*|Stellgröße|stellgröße|Basis\s*Soll.*|Betriebsumschalt.*|Reglerstatus|Relerstatus|Meldung\s*Heiz.*|Ventil|IST$/gi, '')
+                .replace(/IST\s*Temp.*|Soll\s*Temp.*|Solltemp.*|Stellgröße|stellgröße|Basis\s*Soll.*|Betriebsumschalt.*|Reglerstatus|Relerstatus|Meldung\s*Heiz.*|Ventil|IST$|\s*Wert$/gi, '')
                 .trim();
         }
         if (!roomName) roomName = `Zone ${key}`;
@@ -956,33 +1078,6 @@ function groupHeating(gas, byAddr, used, entities) {
             });
         }
 
-        // IST-Temperatur als eigener Sensor
-        if (group.ist) {
-            entities.sensor.push({
-                name: group.ist.name,
-                state_address: group.ist.address,
-                type: 'temperature',
-            });
-        }
-
-        // Soll-Temperatur als eigener Sensor
-        if (group.soll) {
-            entities.sensor.push({
-                name: group.soll.name,
-                state_address: group.soll.address,
-                type: 'temperature',
-            });
-        }
-
-        // Basis-Sollwert als Sensor
-        if (group.basis) {
-            entities.sensor.push({
-                name: group.basis.name,
-                state_address: group.basis.address,
-                type: 'temperature',
-            });
-        }
-
         // Heizmeldung als binary_sensor
         if (group.meldung) {
             entities.binary_sensor.push({
@@ -991,40 +1086,78 @@ function groupHeating(gas, byAddr, used, entities) {
             });
         }
 
-        // Reglerstatus → überspringen (selten als HA-Entität benötigt)
+        // Reglerstatus als Sensor (optional, wenn vorhanden)
+        if (group.regler) {
+            entities.sensor.push({
+                name: `${displayName} Reglerstatus`,
+                state_address: group.regler.address,
+            });
+        }
+
+        // Basis-Sollwert überspringen (interner Theben-Parameter)
     }
 }
 
 // --- Licht/Schalter mit Status-GA paaren ---
+// Schalt-GAs (Mittelgruppe 0) + Status-GAs (Mittelgruppe 5/6) zusammenführen
+// Steckdosen (Mittelgruppe 2) + Status-GAs (Mittelgruppe 5/6) zusammenführen
 function groupLightsSwitches(gas, byAddr, used, entities) {
-    const statusPattern = /\s*Status\s*$/i;
+    // Index: Alle Status-GAs nach Basisname
+    const statusByName = new Map();
+    // Index: Status-GAs nach Adressmuster (gleiche Haupt- und Untergruppe)
+    const statusByPosition = new Map();
 
-    // Status-GAs nach Basisname indexieren
-    const statusMap = new Map();
     for (const ga of gas) {
         if (used.has(ga.address)) continue;
-        if (statusPattern.test(ga.name)) {
-            const baseName = ga.name.replace(statusPattern, '').trim().toLowerCase();
-            // Bei mehreren Status-GAs mit gleichem Namen die erste verwenden
-            if (!statusMap.has(baseName)) statusMap.set(baseName, ga);
+        const [h, m, u] = ga.address.split('/').map(Number);
+        const n = ga.name.toLowerCase();
+
+        // Status-GAs erkennen: Mittelgruppe 5/6 ODER "Status" im Namen
+        if (m === 5 || m === 6 || /\bstatus\b/i.test(ga.name)) {
+            const baseName = ga.name.replace(/\s*Status\s*/i, '').trim().toLowerCase();
+            if (!statusByName.has(baseName)) statusByName.set(baseName, ga);
+            // Auch nach Position indexieren: h/u → Status-GA
+            const posKey = `${h}/${u}`;
+            if (!statusByPosition.has(posKey)) statusByPosition.set(posKey, ga);
         }
     }
 
-    // Schalt-GAs verarbeiten und mit Status paaren
+    // Schalt-GAs verarbeiten
     for (const ga of gas) {
         if (used.has(ga.address)) continue;
-        if (statusPattern.test(ga.name)) continue;
-        if (/heiz|langzeit|kurzzeit|dummy/i.test(ga.name)) continue;
-        if (/position/i.test(ga.name) && ga.haType === 'cover') continue;
-        if (ga.haType === 'sensor' || ga.haType === 'binary_sensor') continue;
-        if (ga.haType === 'climate') continue;
+        const [h, m, u] = ga.address.split('/').map(Number);
 
+        // Nur Mittelgruppe 0 (Schalten) und 2 (Steckdosen) verarbeiten
+        // Oder GAs von Schaltaktoren die keine Cover/Heizung sind
+        const isSchaltGA = m === 0 || m === 2 ||
+            (ga.deviceType === 'schaltaktor' && ga.haType !== 'cover' && ga.haType !== 'climate');
+
+        if (!isSchaltGA) continue;
+        // Keine Cover-, Heizungs-, Sensor-GAs
+        if (ga.haType === 'cover' || ga.haType === 'climate') continue;
+        if (/heiz|stellgr|langzeit|kurzzeit|position|dummy/i.test(ga.name)) continue;
+        if (/\bstatus\b/i.test(ga.name)) continue; // Status-GAs nicht als Entity
+
+        // Status-GA finden: 1) nach Name, 2) nach Adressposition
         const nameLower = ga.name.trim().toLowerCase();
-        const statusGA = statusMap.get(nameLower);
+        let statusGA = statusByName.get(nameLower);
+
+        // Fallback: Adressbasiert – gleiche Haupt+Untergruppe, Status-Mittelgruppe
+        if (!statusGA) {
+            // Mittelgruppe 0 → Status in 5 oder 6 (gleiche Untergruppe)
+            // Mittelgruppe 2 → Status in 5 oder 6
+            for (const statusMid of [5, 6]) {
+                const statusAddr = `${h}/${statusMid}/${u}`;
+                if (byAddr.has(statusAddr) && !used.has(statusAddr)) {
+                    statusGA = byAddr.get(statusAddr);
+                    break;
+                }
+            }
+        }
 
         const isLight = isLightGA(ga.name, ga.address);
-
         const entity = { name: ga.name, address: ga.address };
+
         if (statusGA) {
             entity.state_address = statusGA.address;
             used.add(statusGA.address);
@@ -1042,15 +1175,15 @@ function groupLightsSwitches(gas, byAddr, used, entities) {
 // Entscheidet ob eine GA ein Licht oder ein Schalter ist
 function isLightGA(name, address) {
     const n = name.toLowerCase();
-    // Explizit Schalter
+    // Explizit Schalter/Steckdose
     if (/steckdose|lüft|rückstau|herd|ventil|pumpe|klappe|garage|tor|automatik/i.test(n)) return false;
     // Explizit Licht
     if (/licht|leucht|beleucht|decke|spiegel|halogen|indirekt|spot|led|lampe|bühne|aussenleuchte/i.test(n)) return true;
     // Adresse: Mittelgruppe 0 = Schalten (meist Licht), Mittelgruppe 2 = Steckdosen
     if (address) {
         const mid = parseInt(address.split('/')[1]);
-        if (mid === 2) return false;
-        if (mid === 0) return true;
+        if (mid === 2) return false; // Steckdosen
+        if (mid === 0) return true;  // Licht
     }
     return true;
 }
